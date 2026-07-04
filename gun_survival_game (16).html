@@ -1,0 +1,2704 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>GUN SURVIVAL</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#03090a;
+    --panel:#05171a;
+    --panel-edge: rgba(32,240,192,0.35);
+    --teal:#20f0c0;
+    --teal-soft: rgba(32,240,192,0.5);
+    --teal-dim:#0d4a3d;
+    --red:#ff3b45;
+    --red-dim:#5a1218;
+    --gold:#ffcf3b;
+    --team-color:#4fc3ff;
+    --text:#dffff5;
+    --text-dim:#6fa79b;
+    --font-d:'Orbitron', sans-serif;
+    --font-b:'Rajdhani', sans-serif;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color: transparent; -webkit-touch-callout:none; -webkit-user-select:none; user-select:none;}
+  html,body{margin:0;padding:0;min-height:100%;background:var(--bg);color:var(--text);font-family:var(--font-b);overflow-x:hidden;overflow-y:auto;touch-action:pan-y;}
+  #app{position:relative;width:100%;min-height:100vh;}
+  body::before{
+    content:"";position:fixed;inset:0;pointer-events:none;z-index:9999;
+    background:
+      repeating-linear-gradient(0deg, rgba(255,255,255,0.015) 0px, rgba(255,255,255,0.015) 1px, transparent 1px, transparent 3px),
+      radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,0.65) 100%);
+  }
+  .screen{display:none;width:100%;min-height:100vh;padding:14px;position:relative;z-index:1;}
+  .screen.active{display:block;}
+  input, textarea{-webkit-user-select:text;user-select:text;}
+
+  /* ---- panel / hex shared look ---- */
+  .panel{
+    background:linear-gradient(180deg, rgba(9,32,34,0.9), rgba(3,14,15,0.9));
+    border:1px solid var(--panel-edge);
+    clip-path:polygon(0 10px, 10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%);
+    box-shadow: inset 0 0 24px rgba(32,240,192,0.06), 0 0 12px rgba(32,240,192,0.08);
+    padding:10px 14px;
+  }
+  .eyebrow{font-family:var(--font-d);font-size:11px;letter-spacing:2px;color:var(--teal);opacity:0.85;margin-bottom:6px;}
+
+  .hexbtn{
+    font-family:var(--font-d);
+    color:var(--teal);
+    background:linear-gradient(180deg, rgba(13,74,61,0.55), rgba(3,14,15,0.85));
+    border:1px solid var(--teal-soft);
+    clip-path:polygon(18% 0%, 82% 0%, 100% 50%, 82% 100%, 18% 100%, 0% 50%);
+    display:flex;align-items:center;justify-content:center;text-align:center;
+    cursor:pointer; user-select:none; line-height:1.25;
+    box-shadow:0 0 10px rgba(32,240,192,0.15), inset 0 0 14px rgba(32,240,192,0.08);
+    transition:transform .08s ease, box-shadow .15s ease, filter .15s ease;
+  }
+  .hexbtn:active{transform:scale(0.94);}
+  .hexbtn.big{width:128px;height:128px;font-size:20px;font-weight:700;}
+  .hexbtn.med{width:100px;height:100px;font-size:14px;font-weight:700;}
+  .hexbtn.small{width:96px;height:82px;font-size:12px;font-weight:600;}
+  .hexbtn.fire{border-color:#ff8a8a;color:#ffb3b3;box-shadow:0 0 16px rgba(255,59,69,0.25), inset 0 0 14px rgba(255,59,69,0.12);}
+  .hexbtn.fire:active{box-shadow:0 0 30px rgba(255,59,69,0.55);}
+  .hexbtn.gold{border-color:var(--gold);color:var(--gold);box-shadow:0 0 16px rgba(255,207,59,0.25), inset 0 0 14px rgba(255,207,59,0.12);}
+  .hexbtn.disabled{filter:grayscale(0.8) brightness(0.5);cursor:not-allowed;}
+  .hexbtn small{display:block;font-size:11px;font-weight:500;color:var(--text-dim);margin-top:2px;}
+
+  button, input, select{font-family:var(--font-b);}
+
+  /* ================= SETUP SCREEN ================= */
+  #screen-setup h1{
+    font-family:var(--font-d);font-size:20px;letter-spacing:3px;color:var(--teal);
+    text-shadow:0 0 12px rgba(32,240,192,0.6); margin:4px 0 16px 0;
+  }
+  .setup-row{margin-bottom:16px;}
+  .setup-row label{display:block;font-size:13px;color:var(--text-dim);letter-spacing:1px;margin-bottom:6px;font-family:var(--font-d);}
+  .setup-row input[type=text]{
+    width:100%;padding:12px;background:#02100f;border:1px solid var(--teal-soft);color:var(--text);
+    font-size:16px;border-radius:2px;outline:none;
+  }
+  .team-btns{display:flex;gap:10px;flex-wrap:wrap;}
+  .team-btns .tbtn{
+    flex:1;min-width:120px;padding:14px 8px;text-align:center;border:1px solid var(--teal-soft);color:var(--text-dim);
+    background:#02100f;font-family:var(--font-d);letter-spacing:1px;cursor:pointer;font-size:13px;
+  }
+  .team-btns .tbtn.disabled-slot{opacity:0.35;cursor:not-allowed;}
+  .team-btns .tbtn.sel-ally.active{background:rgba(32,240,192,0.18);color:var(--teal);border-color:var(--teal);box-shadow:0 0 10px rgba(32,240,192,0.3);}
+  .team-btns .tbtn.sel-enemy.active{background:rgba(255,59,69,0.15);color:#ff9a9a;border-color:var(--red);box-shadow:0 0 10px rgba(255,59,69,0.3);}
+
+  /* 모드 선택 카드 */
+  .mode-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .mode-card{
+    border:1px solid var(--teal-dim);background:#02100f;padding:14px 10px;cursor:pointer;
+    clip-path:polygon(0 8px,8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%);
+  }
+  .mode-card.active{border-color:var(--teal);background:rgba(32,240,192,0.14);box-shadow:0 0 12px rgba(32,240,192,0.25);}
+  .mode-card .mode-title{font-family:var(--font-d);font-size:14px;color:var(--teal);letter-spacing:1px;margin-bottom:4px;}
+  .mode-card .mode-desc{font-size:11px;color:var(--text-dim);line-height:1.4;}
+  @media (max-width:420px){ .mode-grid{grid-template-columns:1fr;} }
+  .mode-grid.locked .mode-card{cursor:not-allowed;opacity:0.6;pointer-events:none;}
+  .mode-grid.locked .mode-card.active{opacity:1;}
+  #mode-lock-note{font-size:11px;color:var(--text-dim);margin-top:6px;display:none;}
+  #mode-lock-note.show{display:block;}
+
+  .room-row{display:flex;gap:8px;}
+  .room-row input{flex:1;padding:12px;background:#02100f;border:1px solid var(--teal-soft);color:var(--text);font-size:18px;letter-spacing:3px;text-transform:uppercase;text-align:center;font-family:var(--font-d);outline:none;}
+  .room-row button{padding:0 16px;font-family:var(--font-d);font-size:12px;letter-spacing:1px;background:linear-gradient(180deg, rgba(13,74,61,0.7), rgba(3,14,15,0.9));color:var(--teal);border:1px solid var(--teal);cursor:pointer;white-space:nowrap;}
+  .room-row button:active{transform:scale(0.96);}
+  #room-status{margin-top:8px;font-size:12px;color:var(--text-dim);line-height:1.5;}
+  #room-status.joined{color:var(--teal);}
+  #room-status .room-copy-btn{margin-left:8px;font-size:11px;padding:3px 8px;background:rgba(32,240,192,0.12);border:1px solid var(--teal-soft);color:var(--teal);cursor:pointer;border-radius:3px;}
+
+  #zone-map{width:100%;height:480px;border:1px solid var(--teal-soft);margin-top:6px;filter:saturate(0.5) brightness(0.75) hue-rotate(140deg);}
+  #zone-label{margin-top:8px;font-size:13px;color:var(--teal);min-height:18px;}
+  #zone-hint{font-size:11px;color:var(--text-dim);margin-top:2px;}
+  #zone-hint2{font-size:10px;color:var(--text-dim);margin-top:4px;opacity:0.8;}
+
+  .pickup-type-row{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px;}
+  .pickup-type-btn{padding:8px 10px;font-size:11px;font-family:var(--font-d);border:1px solid var(--teal-soft);background:#02100f;color:var(--teal);cursor:pointer;}
+  .pickup-type-btn.rifle-t{border-color:#4fc3ff;color:#4fc3ff;}
+  .pickup-type-btn.sniper-t{border-color:#ff9d42;color:#ff9d42;}
+  .pickup-type-btn.armed{background:rgba(255,255,255,0.15);box-shadow:0 0 8px rgba(255,255,255,0.4);}
+  #pickup-placement-hint{font-size:11px;color:var(--gold);min-height:16px;margin-bottom:4px;}
+  #pickup-list{display:flex;flex-wrap:wrap;gap:6px;}
+  .pickup-chip{display:flex;align-items:center;gap:6px;background:rgba(32,240,192,0.1);border:1px solid var(--teal-soft);color:var(--text);font-size:11px;padding:4px 8px;border-radius:10px;}
+  .pickup-chip .pc-remove{cursor:pointer;color:var(--text-dim);font-weight:700;}
+  .pickup-chip .pc-remove:hover{color:var(--red);}
+
+  .zone-search-row{display:flex;gap:6px;margin-bottom:6px;}
+  .zone-search-row input{flex:1;padding:10px;background:#02100f;border:1px solid var(--teal-soft);color:var(--text);font-size:14px;outline:none;}
+  .zone-search-row button{font-family:var(--font-d);font-size:12px;letter-spacing:1px;padding:0 16px;border:1px solid var(--teal-soft);background:rgba(13,74,61,0.5);color:var(--teal);cursor:pointer;white-space:nowrap;}
+  .zone-search-row button:active{transform:scale(0.96);}
+  #zone-search-results{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px;}
+  .zone-search-item{background:rgba(32,240,192,0.12);border:1px solid var(--teal-soft);color:var(--teal);font-size:12px;padding:5px 10px;border-radius:12px;cursor:pointer;}
+  .zone-search-item:active{transform:scale(0.96);}
+  .zone-search-empty{font-size:12px;color:var(--text-dim);padding:4px 2px;}
+
+  #start-btn{
+    margin-top:18px;width:100%;padding:16px;font-family:var(--font-d);font-size:16px;letter-spacing:2px;
+    background:linear-gradient(180deg, rgba(13,74,61,0.7), rgba(3,14,15,0.9));color:var(--teal);
+    border:1px solid var(--teal);clip-path:polygon(0 8px,8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%);
+    box-shadow:0 0 14px rgba(32,240,192,0.25); cursor:pointer;
+  }
+  #start-btn:disabled{opacity:0.35;box-shadow:none;}
+  #setup-error{color:#ff9a9a;font-size:12px;margin-top:8px;min-height:16px;}
+
+  /* ================= GAME SCREEN ================= */
+  #screen-game.active{display:flex;flex-direction:column;gap:6px;height:100vh;height:100dvh;padding:8px;overflow:hidden;}
+
+  .mode-topbar{display:flex;justify-content:space-between;align-items:center;font-size:11px;color:var(--text-dim);padding:4px 2px;}
+  .mode-topbar .mt-badge{font-family:var(--font-d);color:var(--teal);letter-spacing:1px;}
+  .mode-topbar .mt-badge.side-terrorist{color:#ff9a9a;}
+
+  .top-row{display:flex;gap:10px;}
+  .hp-panel{flex:1;position:relative;}
+  .hp-number-row{display:flex;align-items:baseline;gap:6px;margin-top:2px;}
+  #hp-number{font-family:var(--font-d);font-size:32px;color:var(--teal);text-shadow:0 0 8px var(--teal);line-height:1;}
+  .hp-max-label{font-size:12px;color:var(--text-dim);}
+  .hp-bar-track{width:100%;height:10px;background:#0a1a18;border:1px solid var(--teal-dim);margin-top:6px;overflow:hidden;}
+  #hp-bar-fill{height:100%;width:100%;background:linear-gradient(90deg, #ff3b45, var(--team-color));transition:width .25s ease;}
+  .items-panel{width:120px;font-size:10px;color:var(--text-dim);text-align:center;}
+  .items-panel .items-row{display:flex;gap:4px;margin-top:4px;}
+  .item-slot{flex:1;aspect-ratio:1;border:1px solid var(--teal-dim);clip-path:polygon(20% 0,80% 0,100% 30%,100% 100%,0 100%,0 30%);display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--text-dim);}
+
+  /* 폭탄 상태바 (대테러전) */
+  #bomb-status-bar{display:none;padding:8px 12px;font-family:var(--font-d);font-size:12px;letter-spacing:1px;text-align:center;border:1px solid var(--teal-dim);background:#02100f;color:var(--text-dim);}
+  #bomb-status-bar.armed{color:var(--red);border-color:var(--red);animation:zonepulse 1s infinite;}
+  #bomb-status-bar.defused{color:var(--teal);border-color:var(--teal);}
+
+  .mid-row{flex:1;display:flex;align-items:center;justify-content:space-between;gap:8px;position:relative;flex-wrap:wrap;}
+  .left-controls, .right-controls{display:flex;flex-direction:column;gap:10px;align-items:center;}
+  .weapon-center{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;position:relative;min-width:140px;}
+  .ammo-box{font-family:var(--font-d);font-size:13px;color:var(--team-color);letter-spacing:1px;background:rgba(0,0,0,0.4);padding:4px 14px;border:1px solid var(--team-color);text-align:center;}
+  .ammo-box .weapon-name{font-size:11px;color:var(--text-dim);margin-bottom:2px;}
+  .ammo-box span#ammo-cur{font-size:20px;}
+  .gun-visual{display:flex;align-items:center;justify-content:center;min-height:52px;filter:drop-shadow(0 0 10px rgba(32,240,192,0.35));transition:transform .06s ease;}
+  .gun-visual.recoil{transform:translateX(-8px) rotate(-3deg);}
+  .safety-state-off{color:#ff9a9a !important;}
+  .safety-state-on{color:var(--teal) !important;}
+  .no-weapon-msg{font-size:12px;color:var(--text-dim);text-align:center;max-width:160px;}
+  #heading-readout{font-size:11px;color:var(--text-dim);font-family:var(--font-d);letter-spacing:1px;}
+  #heading-readout.no-signal{color:#ff9a9a;}
+
+  .bottom-row{display:flex;gap:8px;min-height:120px;flex-wrap:wrap;}
+  .status-panel{flex:1;display:flex;flex-direction:column;min-width:110px;}
+  .status-title{font-family:var(--font-d);font-size:11px;letter-spacing:1px;margin-bottom:6px;text-align:center;}
+  .status-title.enemy{color:#ff9a9a;}
+  .status-title.ally{color:var(--teal);}
+  .status-icons{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;align-items:center;flex:1;}
+  .status-icon{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;border:2px solid;}
+
+  /* 가로모드(총 잡듯이) 회전 안내 */
+  #rotate-hint{display:none;align-items:center;gap:10px;background:rgba(255,207,59,0.1);border:1px solid var(--gold);color:var(--gold);font-size:12px;padding:8px 12px;margin-bottom:6px;cursor:pointer;}
+  #rotate-hint.show{display:flex;}
+  @media (orientation: landscape){
+    #rotate-hint{display:none !important;}
+    #screen-game.active{gap:6px;padding:6px 14px;}
+    .hexbtn.big{width:118px;height:118px;font-size:20px;}
+    .hexbtn.small{width:92px;height:80px;font-size:12px;}
+    .bottom-row{min-height:110px;}
+    .radar-panel{width:110px;}
+  }
+  .status-icon.alive{color:var(--teal);border-color:var(--teal);}
+  .status-icon.dead{color:var(--red);border-color:var(--red);}
+  .status-icon.empty{color:#233;border-color:#233;}
+
+  .radar-panel{width:160px;display:flex;flex-direction:column;align-items:center;}
+  #game-map{width:100%;height:160px;border:2px solid var(--teal-soft);box-shadow:0 0 10px rgba(32,240,192,0.2);}
+  .radar-legend{font-size:9px;color:var(--text-dim);margin-top:4px;text-align:center;line-height:1.4;}
+
+  .leave-link{position:absolute;top:6px;right:10px;font-size:10px;color:var(--text-dim);text-decoration:underline;cursor:pointer;z-index:5;}
+  .zone-badge{position:absolute;top:6px;left:10px;font-size:11px;color:var(--teal);z-index:5;font-family:var(--font-d);letter-spacing:0.5px;padding:3px 8px;background:rgba(0,0,0,0.4);border:1px solid var(--teal-dim);}
+  .zone-badge.out{color:#ffb3b3;border-color:var(--red);animation:zonepulse 1s infinite;}
+  @keyframes zonepulse{0%,100%{opacity:1;}50%{opacity:0.4;}}
+
+  /* 무전 패널 (대테러팀 전용, 텍스트 기반) */
+  #radio-panel{display:none;}
+  #radio-toggle{position:fixed;right:10px;bottom:10px;z-index:150;width:56px;height:56px;border-radius:50%;background:rgba(13,74,61,0.85);border:1px solid var(--teal);color:var(--teal);font-size:22px;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 0 14px rgba(32,240,192,0.35);}
+  #radio-drawer{position:fixed;right:10px;bottom:76px;z-index:150;width:260px;max-height:320px;display:none;flex-direction:column;background:rgba(2,16,15,0.97);border:1px solid var(--teal-soft);box-shadow:0 0 20px rgba(0,0,0,0.6);}
+  #radio-drawer.open{display:flex;}
+  #radio-log{flex:1;overflow-y:auto;padding:8px;font-size:12px;max-height:220px;}
+  .radio-msg{margin-bottom:6px;line-height:1.35;}
+  .radio-msg .rm-name{color:var(--teal);font-weight:700;}
+  .radio-msg.dead .rm-name{color:var(--red);}
+  .radio-msg .rm-text{color:var(--text);}
+  .radio-input-row{display:flex;gap:4px;padding:6px;border-top:1px solid var(--teal-dim);}
+  .radio-input-row input{flex:1;padding:8px;background:#010a09;border:1px solid var(--teal-dim);color:var(--text);font-size:12px;outline:none;}
+  .radio-input-row button{padding:0 10px;background:rgba(13,74,61,0.6);border:1px solid var(--teal-soft);color:var(--teal);font-family:var(--font-d);font-size:11px;cursor:pointer;}
+  #radio-voice-btn{font-size:16px;padding:0 8px !important;}
+  #radio-voice-btn.listening{background:rgba(255,59,69,0.25) !important;border-color:var(--red) !important;color:var(--red) !important;animation:zonepulse 0.8s infinite;}
+  #radio-voice-status{font-size:10px;color:var(--text-dim);padding:0 8px;min-height:14px;}
+
+  /* ================= OVERLAYS ================= */
+  .overlay{position:fixed;inset:0;z-index:200;display:none;align-items:center;justify-content:center;flex-direction:column;text-align:center;padding:24px;}
+  .overlay.show{display:flex;}
+  #hit-overlay{background:rgba(60,0,0,0.55);animation:hitflash 0.5s ease-out;}
+  @keyframes hitflash{0%{background:rgba(255,0,0,0.55);}100%{background:rgba(60,0,0,0.55);}}
+  #hit-overlay h2{color:var(--red);font-family:var(--font-d);font-size:22px;text-shadow:0 0 10px var(--red);margin-bottom:6px;}
+  #hit-overlay p{color:var(--text);font-size:14px;margin:4px 0 18px 0;}
+  #shake-indicator{position:relative;overflow:hidden;animation:shakewiggle 0.6s ease-in-out infinite;}
+  @keyframes shakewiggle{0%,100%{transform:rotate(0deg);}25%{transform:rotate(-6deg);}75%{transform:rotate(6deg);}}
+  #shake-progress{position:absolute;left:0;bottom:0;width:100%;height:0%;background:rgba(32,240,192,0.35);transition:height .15s ease;}
+  #shake-label{position:relative;z-index:2;font-size:14px;}
+
+  #death-overlay{background:rgba(0,0,0,0.85);}
+  #death-overlay h2{color:var(--red);font-family:var(--font-d);font-size:30px;letter-spacing:4px;text-shadow:0 0 16px var(--red);}
+  #death-overlay p{color:var(--text-dim);font-size:13px;margin-top:8px;}
+
+  #win-overlay{background:rgba(0,0,0,0.9);}
+  #win-overlay h2{font-family:var(--font-d);font-size:30px;letter-spacing:4px;margin-bottom:10px;}
+  #win-overlay h2.win{color:var(--teal);text-shadow:0 0 18px var(--teal);}
+  #win-overlay h2.lose{color:var(--red);text-shadow:0 0 18px var(--red);}
+  #win-overlay p{color:var(--text-dim);font-size:13px;}
+
+  #defuse-progress-wrap{position:relative;overflow:hidden;}
+  #defuse-progress{position:absolute;left:0;bottom:0;width:100%;height:0%;background:rgba(255,207,59,0.35);transition:height linear;}
+
+  #toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:rgba(0,0,0,0.85);border:1px solid var(--teal-soft);color:var(--text);padding:10px 18px;font-size:13px;border-radius:4px;z-index:300;opacity:0;transition:opacity .25s ease;pointer-events:none;max-width:85vw;}
+  #toast.show{opacity:1;}
+
+  .screen-shake{animation:shake 0.35s ease;}
+  @keyframes shake{
+    10%,90%{transform:translate3d(-2px,0,0);}
+    20%,80%{transform:translate3d(3px,0,0);}
+    30%,50%,70%{transform:translate3d(-5px,0,0);}
+    40%,60%{transform:translate3d(5px,0,0);}
+  }
+
+  @media (max-width:380px){
+    .hexbtn.big{width:120px;height:120px;font-size:22px;}
+    .hexbtn.med{width:100px;height:100px;font-size:14px;}
+    .hexbtn.small{width:90px;height:78px;font-size:12px;}
+    .radar-panel{width:140px;}
+    #game-map{height:140px;}
+    #zone-map{height:360px;}
+  }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ===================== SETUP SCREEN ===================== -->
+  <div id="screen-setup" class="screen active">
+    <h1>GUN SURVIVAL // 전투 준비</h1>
+
+    <div class="setup-row">
+      <label>멀티플레이 방</label>
+      <div class="room-row">
+        <input type="text" id="room-code-input" maxlength="8" placeholder="방 코드 입력 후 '참여' 또는 '방 만들기'">
+        <button type="button" id="room-join-btn">참여</button>
+        <button type="button" id="room-create-btn">방 만들기</button>
+      </div>
+      <div id="room-status">아직 방에 참가하지 않았습니다. 방장은 "방 만들기"를 눌러 코드를 만들고, 나머지 사람은 그 코드를 입력한 뒤 "참여"를 눌러주세요.</div>
+    </div>
+
+    <div class="setup-row">
+      <label>게임 모드 선택</label>
+      <div class="mode-grid" id="mode-grid">
+        <div class="mode-card" data-mode="ffa">
+          <div class="mode-title">1. 난투전</div>
+          <div class="mode-desc">개인전 · 팀 없음 · HP 20<br>권총/소총/저격총 교체 사용</div>
+        </div>
+        <div class="mode-card" data-mode="ctto">
+          <div class="mode-title">2. 대테러전</div>
+          <div class="mode-desc">테러리스트 vs 대테러팀<br>폭탄 설치/해체 미션</div>
+        </div>
+        <div class="mode-card" data-mode="3v3">
+          <div class="mode-title">3. 3 대 3 전투</div>
+          <div class="mode-desc">레드팀 vs 블루팀 · 팀킬 불가</div>
+        </div>
+        <div class="mode-card" data-mode="4v4">
+          <div class="mode-title">4. 4 대 4 전투</div>
+          <div class="mode-desc">레드팀 vs 블루팀 · 팀킬 불가</div>
+        </div>
+        <div class="mode-card" data-mode="5v5">
+          <div class="mode-title">5. 5 대 5 전투</div>
+          <div class="mode-desc">레드팀 vs 블루팀 · 팀킬 불가</div>
+        </div>
+        <div class="mode-card" data-mode="war">
+          <div class="mode-title">6. 대규모 전쟁</div>
+          <div class="mode-desc">10명 이상 · 레드팀 vs 블루팀</div>
+        </div>
+      </div>
+      <div id="mode-lock-note">방장이 모드를 정하면 자동으로 반영됩니다. 참여자는 모드를 직접 바꿀 수 없습니다.</div>
+    </div>
+
+    <div class="setup-row">
+      <label>닉네임</label>
+      <input type="text" id="nickname" maxlength="10" placeholder="이름을 입력하세요">
+    </div>
+
+    <div class="setup-row" id="team-select-row" style="display:none;">
+      <label>소속 팀</label>
+      <div class="team-btns">
+        <div class="tbtn sel-enemy" data-team="red">레드팀</div>
+        <div class="tbtn sel-ally" data-team="blue">블루팀</div>
+      </div>
+    </div>
+
+    <div class="setup-row" id="ctto-role-row" style="display:none;">
+      <label>소속 진영</label>
+      <div class="team-btns">
+        <div class="tbtn sel-enemy" data-side="terrorist">테러리스트 진영</div>
+        <div class="tbtn sel-ally" data-side="ct">대테러팀 진영</div>
+      </div>
+      <div id="ctto-subrole-wrap" style="display:none;margin-top:10px;">
+        <label>세부 역할</label>
+        <div class="team-btns" id="ctto-subrole-btns"></div>
+      </div>
+    </div>
+
+    <div class="setup-row">
+      <label>전투 지역 선택</label>
+      <div class="zone-search-row">
+        <input type="text" id="zone-search-input" placeholder="지역 검색 (예: 군포시, 경기도)">
+        <button type="button" id="zone-search-btn">검색</button>
+      </div>
+      <div id="zone-search-results"></div>
+      <div id="zone-map"></div>
+      <div id="zone-label">선택된 전투지역: 없음</div>
+      <div id="zone-hint">* 지도 데이터를 불러오는 중입니다...</div>
+      <div id="zone-hint2">PC: 좌클릭 드래그=화면 이동 / 휠(가운데버튼) 누른 채 드래그=확대·축소 / 우클릭으로 두 지점 순서대로 클릭=그 사각형이 전투지역<br>모바일: 한 손가락=화면 이동 / 두 손가락=확대·축소 / 꾹 눌러 1지점, 다시 꾹 눌러 2지점=그 사각형이 전투지역</div>
+    </div>
+
+    <div class="setup-row" id="pickup-setup-row">
+      <label>무기 획득 지점 배치 (권총은 처음부터 소지, 소총/저격총은 맵에서 직접 획득)</label>
+      <div class="pickup-type-row" id="pickup-type-row"></div>
+      <div id="pickup-placement-hint"></div>
+      <div id="pickup-list"></div>
+    </div>
+
+    <button id="start-btn" disabled>전투 시작</button>
+    <div id="setup-error"></div>
+  </div>
+
+  <!-- ===================== GAME SCREEN ===================== -->
+  <div id="screen-game" class="screen">
+    <span class="leave-link" id="leave-btn">게임 나가기</span>
+    <span class="zone-badge" id="zone-status-badge">구역: 확인 중...</span>
+
+    <div id="rotate-hint">📱 화면을 가로로 돌리면 실제로 총을 잡듯이 플레이할 수 있어요 (누르면 닫기)</div>
+
+    <div class="mode-topbar">
+      <span id="mt-room-label" class="mt-badge">방: -</span>
+      <span id="mt-mode-label" class="mt-badge">모드</span>
+      <span id="mt-role-label" class="mt-badge">역할</span>
+    </div>
+
+    <div id="bomb-status-bar">폭탄 상태: 미설치</div>
+
+    <div class="top-row">
+      <div class="panel hp-panel">
+        <div class="eyebrow">HP</div>
+        <div class="hp-number-row"><span id="hp-number">100</span><span class="hp-max-label">/ 100</span></div>
+        <div class="hp-bar-track"><div id="hp-bar-fill"></div></div>
+      </div>
+      <div class="panel items-panel">
+        <div class="eyebrow" style="text-align:center;">획득 아이템</div>
+        <div class="items-row">
+          <div class="item-slot">회복<br>포션</div>
+          <div class="item-slot">교란<br>무전</div>
+          <div class="item-slot">전투<br>자국제</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="mid-row">
+      <div class="left-controls">
+        <div class="hexbtn small" id="swap-btn">총기교체<br><small id="swap-weapon-label">-</small></div>
+        <div class="hexbtn small" id="safety-btn">안전모드<br><small id="safety-state-label" class="safety-state-off">OFF</small></div>
+        <div class="hexbtn small gold" id="acquire-btn" style="display:none;">획득<br><small id="acquire-weapon-label">-</small></div>
+      </div>
+
+      <div class="weapon-center">
+        <div class="ammo-box" id="ammo-box">
+          <div class="weapon-name" id="weapon-name-label">무기</div>
+          탄창 <span id="ammo-cur">0</span> / 예비 <span id="ammo-reserve">0</span>
+        </div>
+        <div class="gun-visual" id="gun-visual"></div>
+        <div id="heading-readout">방향: --°</div>
+        <div class="hexbtn med" id="reload-btn">장전</div>
+        <div class="no-weapon-msg" id="no-weapon-msg" style="display:none;">이 역할은 무기를 사용할 수 없습니다</div>
+      </div>
+
+      <div class="right-controls">
+        <div class="hexbtn big fire" id="fire-btn">발사</div>
+        <div class="hexbtn big gold" id="plant-btn" style="display:none;">폭탄<br>설치</div>
+        <div class="hexbtn big gold" id="defuse-btn" style="display:none;position:relative;overflow:hidden;">
+          <div id="defuse-progress"></div>
+          <span style="position:relative;z-index:2;">꾹 눌러<br>해체<br>(30초)</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="bottom-row">
+      <div class="panel status-panel" id="enemy-status-panel">
+        <div class="status-title enemy" id="enemy-status-title">적군 생존 현황</div>
+        <div class="status-icons" id="enemy-icons"></div>
+      </div>
+
+      <div class="panel radar-panel">
+        <div class="eyebrow">맵</div>
+        <div id="game-map"></div>
+        <div class="radar-legend" id="radar-legend">● 나 &nbsp;▲ 아군</div>
+      </div>
+
+      <div class="panel status-panel" id="ally-status-panel">
+        <div class="status-title ally" id="ally-status-title">아군 생존 현황</div>
+        <div class="status-icons" id="ally-icons"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 무전 (대테러팀 전용, 텍스트 기반 + 음성인식) -->
+  <div id="radio-toggle" title="무전">📻</div>
+  <div id="radio-drawer">
+    <div class="eyebrow" style="padding:8px 8px 0 8px;">대테러팀 무전</div>
+    <div id="radio-log"></div>
+    <div id="radio-voice-status"></div>
+    <div class="radio-input-row">
+      <button type="button" id="radio-voice-btn" title="눌러서 말하기">🎤</button>
+      <input type="text" id="radio-input" maxlength="60" placeholder="무전 메시지 입력">
+      <button type="button" id="radio-send-btn">송신</button>
+    </div>
+  </div>
+
+  <!-- ===================== OVERLAYS ===================== -->
+  <div id="hit-overlay" class="overlay">
+    <h2>피격 - 스턴 상태</h2>
+    <p>발사가 잠겼습니다.<br><b>폰을 세게 흔들어서</b> 스턴을 해제하세요!</p>
+    <div class="hexbtn big" id="shake-indicator" style="border-color:#ff8a8a;color:#ffcaca;">
+      <div id="shake-progress"></div>
+      <span id="shake-label">🤳<br>흔들어서<br>해제</span>
+    </div>
+  </div>
+
+  <div id="death-overlay" class="overlay">
+    <h2>전사</h2>
+    <p>더 이상 발사할 수 없습니다. 관전 모드로 전환됩니다.</p>
+  </div>
+
+  <div id="win-overlay" class="overlay">
+    <h2 id="win-title">승리</h2>
+    <p id="win-desc"></p>
+  </div>
+
+  <div id="toast"></div>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+(function(){
+"use strict";
+
+/* =============== 모드 설정 (무기는 이제 모드와 무관하게 공통 무기고 사용) =============== */
+var MODES = {
+  ffa:  {label:'난투전',        teamMode:'none'},
+  ctto: {label:'대테러전',      teamMode:'ctto'},
+  '3v3':{label:'3 대 3 전투',   teamMode:'redblue'},
+  '4v4':{label:'4 대 4 전투',   teamMode:'redblue'},
+  '5v5':{label:'5 대 5 전투',   teamMode:'redblue'},
+  war:  {label:'대규모 전쟁',   teamMode:'redblue'}
+};
+
+/* =============== 무기 설정 =============== */
+/* category: pistol(시작부터 전원 소지) / rifle,sniper(맵에서 직접 획득해야 함)
+   fireRate: 초당 발사 횟수(연사무기). null이면 한 번 누를 때마다 1발(반자동/단발)
+   reserve: 예비탄창 = 장탄수(mag)의 5배
+   snd: 사운드 합성 파라미터 { freq(기본 톤), decay(감쇠 속도, 클수록 짧고 타격감 있음), dur(길이, 초), loud(음량 0~1) } */
+var WEAPON_DEFS = {
+  basic:      {label:'베이직',       category:'pistol', damage:4,    mag:13, fireRate:null, snd:{freq:1400, decay:5,  dur:0.22, loud:0.55}},
+  unnoise:    {label:'언노이즈',     category:'pistol', damage:5,    mag:15, fireRate:null, snd:{freq:900,  decay:9,  dur:0.12, loud:0.20}},
+  lightfit:   {label:'라잇핏',       category:'pistol', damage:3,    mag:17, fireRate:3.5,  snd:{freq:1700, decay:7,  dur:0.10, loud:0.45}},
+  heavypistol:{label:'헤비피스톨',   category:'pistol', damage:8.5,  mag:7,  fireRate:null, snd:{freq:500,  decay:2.5,dur:0.42, loud:0.85}},
+
+  rise:       {label:'라이즈',       category:'rifle',  damage:5.5,  mag:30, fireRate:7,    snd:{freq:1100, decay:6,  dur:0.16, loud:0.35}},
+  mightguard: {label:'마이트가디',   category:'rifle',  damage:6.5,  mag:25, fireRate:6,    snd:{freq:800,  decay:4.5,dur:0.22, loud:0.55}},
+  galaxy:     {label:'갤럭시',       category:'rifle',  damage:7.5,  mag:15, fireRate:null, snd:{freq:600,  decay:3,  dur:0.34, loud:0.75}},
+
+  jesusrifle: {label:'지저스라이플', category:'sniper', damage:25,   mag:5,  fireRate:null, snd:{freq:950,  decay:6,  dur:0.30, loud:0.28}},
+  titanblast: {label:'타이탄블라스트', category:'sniper', damage:70, mag:3,  fireRate:null, snd:{freq:300,  decay:1.6,dur:0.65, loud:1.0}}
+};
+var PISTOL_KEYS = ['basic','unnoise','lightfit','heavypistol'];
+var RIFLE_KEYS  = ['rise','mightguard','galaxy'];
+var SNIPER_KEYS = ['jesusrifle','titanblast'];
+
+/* =============== 게임 상수 =============== */
+var HIT_MIN_RANGE = 1;    // 피격 인정 최소 거리(m)
+var HIT_MAX_RANGE = 30;   // 피격 인정 최대 거리(m)
+var AIM_CONE_DEG = 45;    // 총구 방향 판정 각도(나침반 오차 감안해 여유있게 설정, 나침반 지원 기기에서만 적용)
+var SYNC_INTERVAL_MS = 2500; // 위치/상태 동기화 주기
+var SHAKE_THRESHOLD = 16;
+var SHAKE_MIN_INTERVAL_MS = 250;
+var SHAKE_RELEASE_NEEDED = 3;
+var BOMB_DEFUSE_RANGE = 15;      // 해체 가능 반경(m)
+var PICKUP_RANGE = 8;            // 무기 획득 가능 반경(m)
+var BOMB_TIMER_MS = 30 * 60 * 1000; // 폭탄 시한 30분
+var BOMB_DEFUSE_HOLD_MS = 30000;    // 해체 꾹 누르기 30초
+var TERRORIST_PING_INTERVAL_MS = 2 * 60 * 1000; // 대테러전: 테러진영 위치 노출 주기
+var ENEMY_PING_INTERVAL_MS = 60 * 1000;         // 그 외 모드: 상대팀 위치 노출 주기
+var PING_VISIBLE_MS = 5000;                     // 노출된 위치가 화면에 보이는 시간
+var RADAR_METERS_PER_PIXEL = 4;                 // 레이더 축척 (동네 몇 블록 규모)
+var GEOJSON_URL = "https://raw.githubusercontent.com/southkorea/southkorea-maps/master/kostat/2013/json/skorea_municipalities_geo_simple.json";
+
+/* =============== 대한민국 시/도 · 시/군/구 좌표 (네트워크 없이 검색) =============== */
+var KOREA_REGIONS = [
+  {name:"서울특별시", lat:37.5665, lng:126.9780},
+  {name:"부산광역시", lat:35.1796, lng:129.0756},
+  {name:"대구광역시", lat:35.8714, lng:128.6014},
+  {name:"인천광역시", lat:37.4563, lng:126.7052},
+  {name:"광주광역시", lat:35.1595, lng:126.8526},
+  {name:"대전광역시", lat:36.3504, lng:127.3845},
+  {name:"울산광역시", lat:35.5384, lng:129.3114},
+  {name:"세종특별자치시", lat:36.4801, lng:127.2890},
+  {name:"경기도", lat:37.4138, lng:127.5183},
+  {name:"강원특별자치도", lat:37.8228, lng:128.1555},
+  {name:"충청북도", lat:36.6357, lng:127.4917},
+  {name:"충청남도", lat:36.5184, lng:126.8000},
+  {name:"전북특별자치도", lat:35.7175, lng:127.1530},
+  {name:"전라남도", lat:34.8161, lng:126.4630},
+  {name:"경상북도", lat:36.4919, lng:128.8889},
+  {name:"경상남도", lat:35.4606, lng:128.2132},
+  {name:"제주특별자치도", lat:33.4996, lng:126.5312},
+
+  {name:"강남구", lat:37.5172, lng:127.0473}, {name:"강동구", lat:37.5301, lng:127.1238},
+  {name:"강북구", lat:37.6396, lng:127.0257}, {name:"강서구(서울)", lat:37.5509, lng:126.8495},
+  {name:"관악구", lat:37.4784, lng:126.9516}, {name:"광진구", lat:37.5384, lng:127.0822},
+  {name:"구로구", lat:37.4954, lng:126.8874}, {name:"금천구", lat:37.4519, lng:126.9020},
+  {name:"노원구", lat:37.6542, lng:127.0568}, {name:"도봉구", lat:37.6688, lng:127.0471},
+  {name:"동대문구", lat:37.5744, lng:127.0396}, {name:"동작구", lat:37.5124, lng:126.9393},
+  {name:"마포구", lat:37.5663, lng:126.9014}, {name:"서대문구", lat:37.5791, lng:126.9368},
+  {name:"서초구", lat:37.4837, lng:127.0324}, {name:"성동구", lat:37.5634, lng:127.0369},
+  {name:"성북구", lat:37.5894, lng:127.0167}, {name:"송파구", lat:37.5145, lng:127.1059},
+  {name:"양천구", lat:37.5169, lng:126.8664}, {name:"영등포구", lat:37.5264, lng:126.8963},
+  {name:"용산구", lat:37.5326, lng:126.9903}, {name:"은평구", lat:37.6027, lng:126.9291},
+  {name:"종로구", lat:37.5729, lng:126.9793}, {name:"중구(서울)", lat:37.5641, lng:126.9979},
+  {name:"중랑구", lat:37.6063, lng:127.0925},
+
+  {name:"수원시", lat:37.2636, lng:127.0286}, {name:"성남시", lat:37.4201, lng:127.1262},
+  {name:"의정부시", lat:37.7381, lng:127.0338}, {name:"안양시", lat:37.3943, lng:126.9568},
+  {name:"부천시", lat:37.5035, lng:126.7660}, {name:"광명시", lat:37.4786, lng:126.8646},
+  {name:"평택시", lat:36.9921, lng:127.1129}, {name:"동두천시", lat:37.9036, lng:127.0606},
+  {name:"안산시", lat:37.3219, lng:126.8309}, {name:"고양시", lat:37.6584, lng:126.8320},
+  {name:"과천시", lat:37.4292, lng:126.9877}, {name:"구리시", lat:37.5943, lng:127.1296},
+  {name:"남양주시", lat:37.6360, lng:127.2165}, {name:"오산시", lat:37.1499, lng:127.0774},
+  {name:"시흥시", lat:37.3799, lng:126.8031}, {name:"군포시", lat:37.3617, lng:126.9352},
+  {name:"의왕시", lat:37.3446, lng:126.9683}, {name:"하남시", lat:37.5393, lng:127.2148},
+  {name:"용인시", lat:37.2411, lng:127.1776}, {name:"파주시", lat:37.7599, lng:126.7802},
+  {name:"이천시", lat:37.2724, lng:127.4350}, {name:"안성시", lat:37.0079, lng:127.2797},
+  {name:"김포시", lat:37.6152, lng:126.7157}, {name:"화성시", lat:37.1996, lng:126.8312},
+  {name:"광주시(경기)", lat:37.4295, lng:127.2551}, {name:"양주시", lat:37.7854, lng:127.0456},
+  {name:"포천시", lat:37.8949, lng:127.2003}, {name:"여주시", lat:37.2984, lng:127.6371},
+  {name:"연천군", lat:38.0965, lng:127.0749}, {name:"가평군", lat:37.8315, lng:127.5095},
+  {name:"양평군", lat:37.4917, lng:127.4875},
+
+  {name:"춘천시", lat:37.8813, lng:127.7298}, {name:"원주시", lat:37.3422, lng:127.9202},
+  {name:"강릉시", lat:37.7519, lng:128.8761}, {name:"동해시", lat:37.5247, lng:129.1143},
+  {name:"태백시", lat:37.1640, lng:128.9856}, {name:"속초시", lat:38.2070, lng:128.5918},
+  {name:"삼척시", lat:37.4499, lng:129.1651}, {name:"홍천군", lat:37.6970, lng:127.8888},
+  {name:"횡성군", lat:37.4917, lng:128.0047}, {name:"영월군", lat:37.1836, lng:128.4616},
+  {name:"평창군", lat:37.3707, lng:128.3900}, {name:"정선군", lat:37.3805, lng:128.6608},
+  {name:"철원군", lat:38.1466, lng:127.3134}, {name:"화천군", lat:38.1064, lng:127.7083},
+  {name:"양구군", lat:38.1097, lng:127.9899}, {name:"인제군", lat:38.0695, lng:128.1701},
+  {name:"고성군(강원)", lat:38.3800, lng:128.4680}, {name:"양양군", lat:38.0754, lng:128.6191},
+
+  {name:"청주시", lat:36.6424, lng:127.4890}, {name:"충주시", lat:36.9910, lng:127.9259},
+  {name:"제천시", lat:37.1326, lng:128.1907}, {name:"보은군", lat:36.4894, lng:127.7295},
+  {name:"옥천군", lat:36.3062, lng:127.5713}, {name:"영동군", lat:36.1750, lng:127.7834},
+  {name:"증평군", lat:36.7853, lng:127.5813}, {name:"진천군", lat:36.8551, lng:127.4356},
+  {name:"괴산군", lat:36.8154, lng:127.7876}, {name:"음성군", lat:36.9401, lng:127.6900},
+  {name:"단양군", lat:36.9846, lng:128.3656},
+
+  {name:"천안시", lat:36.8151, lng:127.1139}, {name:"공주시", lat:36.4467, lng:127.1190},
+  {name:"보령시", lat:36.3332, lng:126.6128}, {name:"아산시", lat:36.7899, lng:127.0018},
+  {name:"서산시", lat:36.7846, lng:126.4502}, {name:"논산시", lat:36.1871, lng:127.0989},
+  {name:"계룡시", lat:36.2745, lng:127.2487}, {name:"당진시", lat:36.8895, lng:126.6291},
+  {name:"금산군", lat:36.1088, lng:127.4881}, {name:"부여군", lat:36.2755, lng:126.9098},
+  {name:"서천군", lat:36.0800, lng:126.6913}, {name:"청양군", lat:36.4592, lng:126.8022},
+  {name:"홍성군", lat:36.6014, lng:126.6608}, {name:"예산군", lat:36.6822, lng:126.8449},
+  {name:"태안군", lat:36.7454, lng:126.2977},
+
+  {name:"전주시", lat:35.8242, lng:127.1480}, {name:"군산시", lat:35.9676, lng:126.7369},
+  {name:"익산시", lat:35.9483, lng:126.9575}, {name:"정읍시", lat:35.5699, lng:126.8557},
+  {name:"남원시", lat:35.4164, lng:127.3905}, {name:"김제시", lat:35.8034, lng:126.8809},
+  {name:"완주군", lat:35.9046, lng:127.1622}, {name:"진안군", lat:35.7917, lng:127.4249},
+  {name:"무주군", lat:36.0067, lng:127.6608}, {name:"장수군", lat:35.6474, lng:127.5211},
+  {name:"임실군", lat:35.6178, lng:127.2892}, {name:"순창군", lat:35.3745, lng:127.1374},
+  {name:"고창군", lat:35.4353, lng:126.7020}, {name:"부안군", lat:35.7318, lng:126.7333},
+
+  {name:"목포시", lat:34.8118, lng:126.3922}, {name:"여수시", lat:34.7604, lng:127.6622},
+  {name:"순천시", lat:34.9506, lng:127.4872}, {name:"나주시", lat:35.0158, lng:126.7108},
+  {name:"광양시", lat:34.9407, lng:127.6957}, {name:"담양군", lat:35.3212, lng:126.9880},
+  {name:"곡성군", lat:35.2818, lng:127.2919}, {name:"구례군", lat:35.2024, lng:127.4629},
+  {name:"고흥군", lat:34.6112, lng:127.2848}, {name:"보성군", lat:34.7715, lng:127.0800},
+  {name:"화순군", lat:35.0645, lng:126.9862}, {name:"장흥군", lat:34.6817, lng:126.9070},
+  {name:"강진군", lat:34.6420, lng:126.7674}, {name:"해남군", lat:34.5734, lng:126.5992},
+  {name:"영암군", lat:34.8003, lng:126.6970}, {name:"무안군", lat:34.9905, lng:126.4816},
+  {name:"함평군", lat:35.0658, lng:126.5165}, {name:"영광군", lat:35.2772, lng:126.5121},
+  {name:"장성군", lat:35.3018, lng:126.7847}, {name:"완도군", lat:34.3111, lng:126.7549},
+  {name:"진도군", lat:34.4867, lng:126.2633}, {name:"신안군", lat:34.8331, lng:126.1067},
+
+  {name:"포항시", lat:36.0190, lng:129.3435}, {name:"경주시", lat:35.8562, lng:129.2247},
+  {name:"김천시", lat:36.1398, lng:128.1136}, {name:"안동시", lat:36.5684, lng:128.7294},
+  {name:"구미시", lat:36.1195, lng:128.3446}, {name:"영주시", lat:36.8055, lng:128.6240},
+  {name:"영천시", lat:35.9733, lng:128.9386}, {name:"상주시", lat:36.4108, lng:128.1590},
+  {name:"문경시", lat:36.5867, lng:128.1868}, {name:"경산시", lat:35.8251, lng:128.7411},
+  {name:"군위군", lat:36.2426, lng:128.5726}, {name:"의성군", lat:36.3527, lng:128.6970},
+  {name:"청송군", lat:36.4359, lng:129.0570}, {name:"영양군", lat:36.6668, lng:129.1123},
+  {name:"영덕군", lat:36.4152, lng:129.3656}, {name:"청도군", lat:35.6474, lng:128.7341},
+  {name:"고령군", lat:35.7263, lng:128.2626}, {name:"성주군", lat:35.9192, lng:128.2828},
+  {name:"칠곡군", lat:35.9955, lng:128.4016}, {name:"예천군", lat:36.6577, lng:128.4522},
+  {name:"봉화군", lat:36.8931, lng:128.7326}, {name:"울진군", lat:36.9930, lng:129.4003},
+  {name:"울릉군", lat:37.4844, lng:130.9057},
+
+  {name:"창원시", lat:35.2280, lng:128.6811}, {name:"진주시", lat:35.1800, lng:128.1076},
+  {name:"통영시", lat:34.8544, lng:128.4331}, {name:"사천시", lat:35.0038, lng:128.0642},
+  {name:"김해시", lat:35.2285, lng:128.8894}, {name:"밀양시", lat:35.5037, lng:128.7466},
+  {name:"거제시", lat:34.8806, lng:128.6212}, {name:"양산시", lat:35.3350, lng:129.0374},
+  {name:"의령군", lat:35.3222, lng:128.2617}, {name:"함안군", lat:35.2725, lng:128.4064},
+  {name:"창녕군", lat:35.5443, lng:128.4923}, {name:"고성군(경남)", lat:34.9732, lng:128.3222},
+  {name:"남해군", lat:34.8375, lng:127.8926}, {name:"하동군", lat:35.0670, lng:127.7515},
+  {name:"산청군", lat:35.4154, lng:127.8737}, {name:"함양군", lat:35.5203, lng:127.7253},
+  {name:"거창군", lat:35.6866, lng:127.9095}, {name:"합천군", lat:35.5665, lng:128.1656},
+
+  {name:"제주시", lat:33.4996, lng:126.5312}, {name:"서귀포시", lat:33.2540, lng:126.5601},
+
+  {name:"강서구(부산)", lat:35.2124, lng:128.9808}, {name:"금정구", lat:35.2431, lng:129.0921},
+  {name:"기장군", lat:35.2443, lng:129.2223}, {name:"해운대구", lat:35.1631, lng:129.1638},
+  {name:"수영구", lat:35.1454, lng:129.1132}, {name:"연제구", lat:35.1762, lng:129.0794},
+  {name:"동래구", lat:35.2049, lng:129.0839}, {name:"부산진구", lat:35.1627, lng:129.0531},
+  {name:"사상구", lat:35.1526, lng:128.9908}, {name:"사하구", lat:35.1044, lng:128.9746},
+  {name:"영도구", lat:35.0912, lng:129.0678},
+
+  {name:"달서구", lat:35.8298, lng:128.5326}, {name:"달성군", lat:35.7746, lng:128.4315},
+  {name:"수성구", lat:35.8583, lng:128.6310},
+
+  {name:"계양구", lat:37.5375, lng:126.7378}, {name:"남동구", lat:37.4468, lng:126.7314},
+  {name:"미추홀구", lat:37.4633, lng:126.6503}, {name:"부평구", lat:37.5074, lng:126.7217},
+  {name:"연수구", lat:37.4106, lng:126.6786}, {name:"강화군", lat:37.7469, lng:126.4880},
+  {name:"옹진군", lat:37.4463, lng:126.6360},
+
+  {name:"광산구", lat:35.1397, lng:126.7935},
+
+  {name:"대덕구", lat:36.3468, lng:127.4155}, {name:"유성구", lat:36.3624, lng:127.3564},
+
+  {name:"울주군", lat:35.5222, lng:129.2427}
+];
+
+/* =============== 상태 변수 =============== */
+var roomCode = null;
+var isRoomHost = false;
+var guestZonePreviewLayer = null;
+var guestZonePollTimer = null;
+var myJoinedAt = 0;          // 참여 시각(이 시각 이후의 시작 신호에만 반응)
+var gameAutoStarting = false; // 자동 시작 중복 트리거 방지
+var myId = null;
+var myName = "";
+var selectedMode = null;   // 설정화면에서 고른 모드
+var myMode = null;         // 실제 게임에 적용된 모드
+var myTeam = null;         // redblue 모드: 'red' | 'blue'
+var myCttoSide = null;     // 설정화면: 'terrorist' | 'ct'
+var myCttoRole = null;     // 설정화면: 'terrorist'|'bomber'|'ct'|'disposal'
+var mySide = null;         // 실제 적용된 진영 (ctto: side / redblue: team / ffa: null)
+var myRole = null;         // 실제 적용된 역할
+
+var myWeapons = [];         // 이번 게임에서 쓸 수 있는 무기 키 배열 (권총 4종은 항상 포함, 소총/저격총은 획득해야 추가됨)
+var currentWeaponKey = null;
+var weaponAmmo = {};        // {weaponKey: {mag, reserve}}
+var autoFireTimer = null;   // 연사무기 자동발사 타이머
+var pickups = [];           // 방장이 지정한 무기 획득 지점 [{id, weapon, lat, lng}]
+var myTeamColor = '#4fc3ff'; // 팀 테마색 (블루/개인전=하늘색, 레드=주황)
+
+var MAX_HP = 100;
+
+var myLat = null, myLng = null;
+var myHeading = null;
+var safetyOn = false;
+var canFire = true;
+var isAlive = true;
+var lastSeenHitTime = 0;
+var reloading = false;
+var audioCtx = null;
+var syncTimer = null;
+var geoWatchId = null;
+var latestPlayers = {};
+var battleZoneBounds = null;
+var outOfZone = false;
+var shakeCount = 0;
+var lastAccel = null;
+var lastShakeTime = 0;
+var orientationBound = false;
+var motionBound = false;
+var gameState = {};
+var lastKnownWinner = null;
+var lastPingSentAt = 0;
+
+/* =============== 유틸 =============== */
+function $(id){ return document.getElementById(id); }
+
+function toast(msg){
+  var t = $("toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  clearTimeout(toast._tm);
+  toast._tm = setTimeout(function(){ t.classList.remove("show"); }, 2400);
+}
+
+function escapeHtml(s){
+  return String(s).replace(/[&<>"]/g, function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];
+  });
+}
+
+function distanceMeters(lat1, lon1, lat2, lon2){
+  var R = 6371000;
+  var dLat = (lat2 - lat1) * Math.PI/180;
+  var dLon = (lon2 - lon1) * Math.PI/180;
+  var a = Math.sin(dLat/2)*Math.sin(dLat/2) +
+          Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*
+          Math.sin(dLon/2)*Math.sin(dLon/2);
+  var c = 2*Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return R * c;
+}
+
+function bearingDeg(lat1, lon1, lat2, lon2){
+  var φ1 = lat1 * Math.PI/180, φ2 = lat2 * Math.PI/180;
+  var Δλ = (lon2 - lon1) * Math.PI/180;
+  var y = Math.sin(Δλ) * Math.cos(φ2);
+  var x = Math.cos(φ1) * Math.sin(φ2) - Math.sin(φ1) * Math.cos(φ2) * Math.cos(Δλ);
+  var θ = Math.atan2(y, x);
+  return (θ * 180/Math.PI + 360) % 360;
+}
+
+function angleDiff(a, b){
+  var d = Math.abs(a - b) % 360;
+  return d > 180 ? 360 - d : d;
+}
+
+function uuid(){
+  if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c){
+    var r = Math.random()*16|0, v = c === 'x' ? r : (r&0x3|0x8);
+    return v.toString(16);
+  });
+}
+
+/* =============== 저장소 헬퍼 =============== */
+/* 클로드 아티팩트 안에서는 window.storage를 그대로 쓰고,
+   외부 웹사이트(GitHub Pages 등)로 배포됐을 때는 Supabase를 대신 씁니다.
+   나머지 코드는 이 두 함수(storageGet/storageSet)의 계약(문자열을 넣고 문자열을 받음)만
+   알면 되므로, 다른 부분은 전혀 수정할 필요가 없습니다. */
+var USE_NATIVE_STORAGE = (typeof window.storage !== 'undefined' && typeof window.storage.get === 'function');
+
+var SUPABASE_URL = "https://jdxmjqbjztlvtgskmjip.supabase.co".replace(/\/rest\/v1\/?$/, '');
+var SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpkeG1qcWJqenRsdnRnc2ttamlwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI5ODk3MTEsImV4cCI6MjA5ODU2NTcxMX0.bvR1E4y0YBX6BrEHYkWZU3lULkmfXyE3cJJvOjsEFpM";
+
+async function storageGet(key, shared){
+  if (USE_NATIVE_STORAGE){
+    try{
+      var r = await window.storage.get(key, !!shared);
+      return r ? r.value : null;
+    }catch(e){
+      return null;
+    }
+  }
+
+  if (!shared){
+    // 개인 데이터(내 기기에만 필요한 값)는 그냥 이 브라우저에 저장
+    try{ return localStorage.getItem('gs_' + key); }catch(e){ return null; }
+  }
+
+  // 공유 데이터(방/플레이어/폭탄 등)는 Supabase에 저장
+  try{
+    var res = await fetch(
+      SUPABASE_URL + '/rest/v1/kv_store?key=eq.' + encodeURIComponent(key) + '&select=value',
+      { headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY } }
+    );
+    if (!res.ok) return null;
+    var rows = await res.json();
+    if (!rows || rows.length === 0) return null;
+    var val = rows[0].value;
+    return (typeof val === 'string') ? val : JSON.stringify(val);
+  }catch(e){
+    return null;
+  }
+}
+
+async function storageSet(key, value, shared){
+  if (USE_NATIVE_STORAGE){
+    try{
+      await window.storage.set(key, value, !!shared);
+      return true;
+    }catch(e){
+      return false;
+    }
+  }
+
+  if (!shared){
+    try{ localStorage.setItem('gs_' + key, value); return true; }catch(e){ return false; }
+  }
+
+  try{
+    var parsedValue;
+    try{ parsedValue = JSON.parse(value); }catch(e){ parsedValue = value; }
+    var res = await fetch(SUPABASE_URL + '/rest/v1/kv_store', {
+      method: 'POST',
+      headers: {
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
+        'Content-Type': 'application/json',
+        'Prefer': 'resolution=merge-duplicates'
+      },
+      body: JSON.stringify({ key: key, value: parsedValue })
+    });
+    return res.ok;
+  }catch(e){
+    return false;
+  }
+}
+
+/* 방(room) 단위로 데이터를 격리하기 위한 키 네임스페이스 */
+function roomKey(key){
+  return 'room:' + (roomCode || 'NOROOM') + ':' + key;
+}
+
+async function updateSharedPlayers(mutator){
+  var raw = await storageGet(roomKey('players'), true);
+  var players = {};
+  if (raw){ try{ players = JSON.parse(raw); }catch(e){ players = {}; } }
+  mutator(players);
+  await storageSet(roomKey('players'), JSON.stringify(players), true);
+  return players;
+}
+
+async function updateGameState(mutator){
+  var raw = await storageGet(roomKey('state'), true);
+  var state = {};
+  if (raw){ try{ state = JSON.parse(raw); }catch(e){ state = {}; } }
+  mutator(state);
+  await storageSet(roomKey('state'), JSON.stringify(state), true);
+  return state;
+}
+
+/* =============== 플레이어 식별 / 프로필 =============== */
+async function initIdentity(){
+  var savedId = await storageGet('player-id', false);
+  if (!savedId){
+    savedId = uuid();
+    await storageSet('player-id', savedId, false);
+  }
+  myId = savedId;
+
+  var savedProfile = await storageGet('player-profile', false);
+  if (savedProfile){
+    try{
+      var p = JSON.parse(savedProfile);
+      if (p.name) $("nickname").value = p.name;
+      if (p.roomCode){
+        roomCode = p.roomCode;
+        isRoomHost = !!p.isRoomHost;
+        $("room-code-input").value = roomCode;
+        updateRoomStatus();
+        updateZoneEditability();
+      }
+    }catch(e){}
+  }
+}
+
+async function saveProfile(){
+  await storageSet('player-profile', JSON.stringify({name: myName, roomCode: roomCode, isRoomHost: isRoomHost}), false);
+}
+
+/* =============== 방(멀티플레이) 코드 =============== */
+function generateRoomCode(){
+  var chars = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'; // 헷갈리는 0/O, 1/I/L 제외
+  var code = '';
+  for (var i=0;i<5;i++){ code += chars.charAt(Math.floor(Math.random()*chars.length)); }
+  return code;
+}
+
+function normalizeRoomCode(s){
+  return (s || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8);
+}
+
+function updateRoomStatus(){
+  var el = $("room-status");
+  if (!roomCode){
+    el.className = '';
+    el.textContent = '아직 방에 참가하지 않았습니다. 방장은 "방 만들기"를 눌러 코드를 만들고, 나머지 사람은 그 코드를 입력한 뒤 "참여"를 눌러주세요.';
+    return;
+  }
+  el.className = 'joined';
+  if (isRoomHost){
+    el.innerHTML = '[방장] 방 코드: <b>' + roomCode + '</b> - 같이 할 사람들에게 이 코드를 알려주세요. 전투구역은 방장인 내가 지정합니다.' +
+      '<span class="room-copy-btn" id="room-copy-btn">복사</span>';
+    var copyBtn = $("room-copy-btn");
+    if (copyBtn){
+      copyBtn.addEventListener('click', function(){
+        try{
+          navigator.clipboard.writeText(roomCode);
+          toast('방 코드를 복사했습니다');
+        }catch(e){
+          toast('복사에 실패했습니다. 코드를 직접 알려주세요: ' + roomCode);
+        }
+      });
+    }
+  } else {
+    el.innerHTML = '[참여자] 방 <b>' + roomCode + '</b>에 참여했습니다. 전투구역은 방장이 지정한 것을 그대로 사용합니다(직접 수정 불가).';
+  }
+}
+
+/* 전투구역 지정 UI 접근 가능 여부를 화면에 반영 (참여자는 보기만 가능) */
+function updateZoneEditability(){
+  var canEdit = isRoomHost;
+  $("zone-search-input").disabled = !canEdit;
+  $("zone-search-btn").disabled = !canEdit;
+  if (!canEdit){
+    $("zone-hint2").innerHTML = '참여자는 전투구역을 볼 수만 있고 직접 설정할 수 없습니다. 방장 화면에서 설정한 구역이 자동으로 표시됩니다.';
+  } else {
+    $("zone-hint2").innerHTML = 'PC: 좌클릭 드래그=화면 이동 / 휠(가운데버튼) 누른 채 드래그=확대·축소 / 우클릭으로 두 지점 순서대로 클릭=그 사각형이 전투지역<br>모바일: 한 손가락=화면 이동 / 두 손가락=확대·축소 / 꾹 눌러 1지점, 다시 꾹 눌러 2지점=그 사각형이 전투지역';
+  }
+}
+
+/* 참여자용: 방장이 저장해 둔 구역을 불러와 미리보기로 표시 (직접 수정은 불가) */
+async function refreshGuestZonePreview(){
+  if (isRoomHost || !roomCode || !zoneMap) return;
+  var raw = await storageGet(roomKey('zone'), true);
+  if (!raw){
+    if (guestZonePreviewLayer){ zoneMap.removeLayer(guestZonePreviewLayer); guestZonePreviewLayer = null; }
+    $("zone-label").textContent = "선택된 전투지역: 아직 방장이 설정하지 않았습니다 (대기 중)";
+    return;
+  }
+  var b;
+  try{ b = JSON.parse(raw); }catch(e){ return; }
+  var bounds = L.latLngBounds([b.south, b.west], [b.north, b.east]);
+  if (guestZonePreviewLayer){ zoneMap.removeLayer(guestZonePreviewLayer); }
+  guestZonePreviewLayer = L.rectangle(bounds, {
+    color:'#2f8fff', weight:4, fillColor:'#2f8fff', fillOpacity:0.16, dashArray:'10,6', interactive:false
+  }).addTo(zoneMap);
+  updateZoneLabel(bounds);
+  zoneMap.fitBounds(bounds, {maxZoom: 14, padding:[40,40]});
+}
+
+$("room-create-btn").addEventListener('click', async function(){
+  roomCode = generateRoomCode();
+  isRoomHost = true;
+  $("room-code-input").value = roomCode;
+  clearInterval(guestZonePollTimer);
+  if (guestZonePreviewLayer && zoneMap){ zoneMap.removeLayer(guestZonePreviewLayer); guestZonePreviewLayer = null; }
+  updateRoomStatus();
+  updateZoneEditability();
+  updateModeLockUI();
+  if (selectedMode) broadcastHostSetup();
+  if (selectedMode === 'ctto' && myCttoSide){ renderCttoSubroles(); }
+  await loadPickups();
+  renderAllPickupMarkers();
+  renderPickupList();
+  validateStart();
+});
+
+$("room-join-btn").addEventListener('click', async function(){
+  var code = normalizeRoomCode($("room-code-input").value);
+  if (!code){ toast("참여할 방 코드를 입력해주세요"); return; }
+  roomCode = code;
+  isRoomHost = false;
+  myJoinedAt = Date.now();
+  gameAutoStarting = false;
+  $("room-code-input").value = roomCode;
+  updateRoomStatus();
+  updateZoneEditability();
+  updateModeLockUI();
+  refreshGuestZonePreview();
+  pollHostSetup();
+  await loadPickups();
+  renderAllPickupMarkers();
+  renderPickupList();
+  clearInterval(guestZonePollTimer);
+  guestZonePollTimer = setInterval(async function(){
+    refreshGuestZonePreview();
+    pollHostSetup();
+    await loadPickups();
+    renderAllPickupMarkers();
+    renderPickupList();
+  }, 3000);
+  if (selectedMode === 'ctto' && myCttoSide){ renderCttoSubroles(); }
+  validateStart();
+});
+
+/* =============== 방장 -> 참여자 설정 동기화 (모드 / 게임 시작 신호) =============== */
+function updateModeLockUI(){
+  var locked = !!roomCode && !isRoomHost;
+  $("mode-grid").classList.toggle('locked', locked);
+  $("mode-lock-note").classList.toggle('show', locked);
+}
+
+async function broadcastHostSetup(){
+  if (!roomCode || !isRoomHost || !selectedMode) return;
+  var raw = await storageGet(roomKey('setup'), true);
+  var setup = {};
+  if (raw){ try{ setup = JSON.parse(raw); }catch(e){} }
+  setup.mode = selectedMode;
+  await storageSet(roomKey('setup'), JSON.stringify(setup), true);
+}
+
+async function broadcastGameStart(){
+  if (!roomCode || !isRoomHost) return;
+  var raw = await storageGet(roomKey('setup'), true);
+  var setup = {};
+  if (raw){ try{ setup = JSON.parse(raw); }catch(e){} }
+  setup.mode = selectedMode;
+  setup.startedAt = Date.now();
+  await storageSet(roomKey('setup'), JSON.stringify(setup), true);
+}
+
+async function pollHostSetup(){
+  if (isRoomHost || !roomCode) return;
+  var raw = await storageGet(roomKey('setup'), true);
+  if (!raw) return;
+  var setup;
+  try{ setup = JSON.parse(raw); }catch(e){ return; }
+
+  if (setup.mode && setup.mode !== selectedMode){
+    selectMode(setup.mode);
+    toast("방장이 모드를 \"" + MODES[setup.mode].label + "\"(으)로 설정했습니다");
+  }
+
+  if (setup.startedAt && setup.startedAt > myJoinedAt && !gameAutoStarting){
+    gameAutoStarting = true;
+    attemptAutoStart();
+  }
+}
+
+async function attemptAutoStart(){
+  myName = $("nickname").value.trim();
+  if (!myName){
+    toast("방장이 게임을 시작했습니다! 닉네임을 입력한 뒤 직접 \"전투 시작\"을 눌러주세요");
+    gameAutoStarting = false;
+    return;
+  }
+  var conf = MODES[selectedMode];
+  if (conf.teamMode === 'redblue' && !myTeam){
+    toast("방장이 게임을 시작했습니다! 팀을 먼저 선택해주세요");
+    gameAutoStarting = false;
+    return;
+  }
+  if (selectedMode === 'ctto' && (!myCttoSide || !myCttoRole)){
+    toast("방장이 게임을 시작했습니다! 진영과 역할을 먼저 선택해주세요");
+    gameAutoStarting = false;
+    return;
+  }
+  toast("방장이 게임을 시작했습니다! 자동으로 참가합니다...");
+  await doStartFlow();
+}
+
+/* =============== 모드 선택 UI =============== */
+function selectMode(mode){
+  selectedMode = mode;
+  document.querySelectorAll('.mode-card').forEach(function(el){
+    el.classList.toggle('active', el.getAttribute('data-mode') === mode);
+  });
+
+  myTeam = null; myCttoSide = null; myCttoRole = null;
+  document.querySelectorAll('#team-select-row .tbtn').forEach(function(el){ el.classList.remove('active'); });
+  document.querySelectorAll('#ctto-role-row .tbtn[data-side]').forEach(function(el){ el.classList.remove('active'); });
+  $("ctto-subrole-wrap").style.display = 'none';
+  $("ctto-subrole-btns").innerHTML = '';
+
+  var conf = MODES[mode];
+  $("team-select-row").style.display = (conf.teamMode === 'redblue') ? 'block' : 'none';
+  $("ctto-role-row").style.display = (mode === 'ctto') ? 'block' : 'none';
+
+  if (isRoomHost) broadcastHostSetup();
+  validateStart();
+}
+
+document.querySelectorAll('.mode-card').forEach(function(el){
+  el.addEventListener('click', function(){
+    if (roomCode && !isRoomHost){ toast("모드는 방장만 바꿀 수 있습니다"); return; }
+    selectMode(el.getAttribute('data-mode'));
+  });
+});
+
+document.querySelectorAll('#team-select-row .tbtn').forEach(function(el){
+  el.addEventListener('click', function(){
+    myTeam = el.getAttribute('data-team');
+    document.querySelectorAll('#team-select-row .tbtn').forEach(function(x){ x.classList.toggle('active', x === el); });
+    validateStart();
+  });
+});
+
+document.querySelectorAll('#ctto-role-row .tbtn[data-side]').forEach(function(el){
+  el.addEventListener('click', function(){
+    myCttoSide = el.getAttribute('data-side');
+    myCttoRole = null;
+    document.querySelectorAll('#ctto-role-row .tbtn[data-side]').forEach(function(x){ x.classList.toggle('active', x === el); });
+    $("ctto-subrole-wrap").style.display = 'block';
+    renderCttoSubroles();
+    validateStart();
+  });
+});
+
+async function renderCttoSubroles(){
+  var wrap = $("ctto-subrole-btns");
+  wrap.innerHTML = '';
+  var options = (myCttoSide === 'terrorist')
+    ? [{role:'terrorist', label:'일반 테러리스트', cap:null}, {role:'bomber', label:'폭탄 설치반', cap:2}]
+    : [{role:'ct', label:'특수전단', cap:null}, {role:'disposal', label:'폭탄처리반', cap:2}];
+
+  var raw = await storageGet(roomKey('players'), true);
+  var players = {};
+  if (raw){ try{ players = JSON.parse(raw); }catch(e){} }
+  var counts = {};
+  Object.keys(players).forEach(function(pid){
+    var p = players[pid];
+    if (p && p.alive !== false){ counts[p.role] = (counts[p.role] || 0) + 1; }
+  });
+
+  options.forEach(function(opt){
+    var div = document.createElement('div');
+    div.className = 'tbtn ' + (myCttoSide === 'terrorist' ? 'sel-enemy' : 'sel-ally');
+    var full = !!(opt.cap && counts[opt.role] >= opt.cap);
+    div.textContent = opt.label + (opt.cap ? (' (정원 ' + opt.cap + '명' + (full ? ' - 마감' : '') + ')') : '');
+    if (full){
+      div.classList.add('disabled-slot');
+    } else {
+      div.addEventListener('click', function(){
+        myCttoRole = opt.role;
+        wrap.querySelectorAll('.tbtn').forEach(function(x){ x.classList.toggle('active', x === div); });
+        validateStart();
+      });
+    }
+    wrap.appendChild(div);
+  });
+}
+
+$("nickname").addEventListener('input', validateStart);
+
+function validateStart(){
+  var ok = $("nickname").value.trim().length > 0 && !!selectedMode && !!roomCode;
+  if (selectedMode){
+    var conf = MODES[selectedMode];
+    if (conf.teamMode === 'redblue') ok = ok && !!myTeam;
+    if (selectedMode === 'ctto') ok = ok && !!myCttoSide && !!myCttoRole;
+  }
+  $("start-btn").disabled = !ok;
+}
+
+/* =============== 전투 지역 선택 지도 (Leaflet) =============== */
+/* 조작법
+   PC : 좌클릭 드래그 = 화면 이동 / 휠(가운데버튼) 누른 채 드래그 = 확대·축소 / 우클릭으로 두 지점을 순서대로 찍으면 그 사각형이 전투지역
+   모바일 : 한 손가락 드래그 = 화면 이동 / 두 손가락 핀치 = 확대·축소 / 화면을 꾹 눌러 1지점 선택, 다시 꾹 눌러 2지점 선택하면 그 사각형이 전투지역
+*/
+var zoneMap = null;
+var zoneLayer = null;
+var pendingPickLatLng = null;
+var pendingPickMarker = null;
+var previewRectLayer = null;
+var zoneRectLayer = null;
+
+/* 참고: 화면에 표시되는 시/군/구 경계선은 눈으로 위치를 가늠하기 위한 참고용일 뿐이며,
+   실제 전투 가능 범위는 아래에서 사용자가 직접 찍은 사각형 좌표만 사용합니다.
+   (예전엔 "이 사각형과 겹치는 행정구역"을 자동으로 찾아 표시했는데, 데이터 오차로
+   엉뚱하게 먼 지역까지 걸리는 문제가 반복되어 이 기능은 제거했습니다.) */
+function updateZoneLabel(bounds){
+  if (!bounds){
+    $("zone-label").textContent = "선택된 전투지역: 없음";
+    return;
+  }
+  var s = bounds.getSouth().toFixed(4), n = bounds.getNorth().toFixed(4);
+  var w = bounds.getWest().toFixed(4), e = bounds.getEast().toFixed(4);
+  $("zone-label").textContent = "선택된 전투지역: 남서(" + s + ", " + w + ") ~ 북동(" + n + ", " + e + ")";
+}
+
+function doZoneSearch(){
+  var q = $("zone-search-input").value.trim();
+  var resultsBox = $("zone-search-results");
+  resultsBox.innerHTML = "";
+  if (!q) return;
+
+  var matches = KOREA_REGIONS.filter(function(r){ return r.name.indexOf(q) !== -1; });
+
+  if (matches.length === 0){
+    resultsBox.innerHTML = '<div class="zone-search-empty">일치하는 지역이 없습니다. (예: "군포", "수원시", "경기도")</div>';
+    return;
+  }
+  if (matches.length === 1){ goToRegion(matches[0]); return; }
+
+  matches.slice(0, 10).forEach(function(r){
+    var item = document.createElement('div');
+    item.className = 'zone-search-item';
+    item.textContent = r.name;
+    item.addEventListener('click', function(){
+      goToRegion(r);
+      resultsBox.innerHTML = "";
+      $("zone-search-input").value = r.name;
+    });
+    resultsBox.appendChild(item);
+  });
+}
+
+function goToRegion(r){
+  zoneMap.setView([r.lat, r.lng], 13);
+}
+
+$("zone-search-btn").addEventListener('click', doZoneSearch);
+$("zone-search-input").addEventListener('keydown', function(e){
+  if (e.key === 'Enter'){ e.preventDefault(); doZoneSearch(); }
+});
+
+var lastZonePickTime = 0;
+var ZONE_PICK_COOLDOWN_MS = 400;
+
+function handleZonePick(latlng){
+  if (!isRoomHost){ toast("전투구역은 방장만 설정할 수 있습니다"); return; }
+  var now = Date.now();
+  if (now - lastZonePickTime < ZONE_PICK_COOLDOWN_MS) return;
+  lastZonePickTime = now;
+
+  if (!pendingPickLatLng){
+    pendingPickLatLng = latlng;
+    if (pendingPickMarker) zoneMap.removeLayer(pendingPickMarker);
+    pendingPickMarker = L.circleMarker(latlng, {
+      radius:9, color:'#ffffff', weight:2, fillColor:'#2f8fff', fillOpacity:0.9
+    }).addTo(zoneMap);
+    $("zone-label").textContent = "1지점 선택됨 - 반대쪽 지점을 선택하세요";
+  } else {
+    var bounds = L.latLngBounds(pendingPickLatLng, latlng);
+    if (pendingPickMarker){ zoneMap.removeLayer(pendingPickMarker); pendingPickMarker = null; }
+    if (previewRectLayer){ zoneMap.removeLayer(previewRectLayer); previewRectLayer = null; }
+    pendingPickLatLng = null;
+    applyZoneSelection(bounds);
+  }
+}
+
+function applyZoneSelection(bounds){
+  if (zoneRectLayer){ zoneMap.removeLayer(zoneRectLayer); zoneRectLayer = null; }
+  zoneRectLayer = L.rectangle(bounds, {
+    color:'#2f8fff', weight:4, fillColor:'#2f8fff', fillOpacity:0.16, dashArray:'10,6'
+  }).addTo(zoneMap);
+  updateZoneLabel(bounds);
+}
+
+function initZoneMap(){
+  zoneMap = L.map('zone-map', {
+    zoomControl:true,
+    zoomSnap:0.25,
+    zoomDelta:0.5,
+    tapHold:false,
+    boxZoom:false
+  }).setView([36.5, 127.8], 7);
+
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 18,
+    attribution: '&copy; OpenStreetMap contributors'
+  }).addTo(zoneMap);
+
+  var container = zoneMap.getContainer();
+
+  container.addEventListener('contextmenu', function(e){
+    e.preventDefault();
+    zoneMap.invalidateSize(); // 스크롤/레이아웃 변화로 지도 위치 캐시가 낡아 좌표가 밀리는 것을 방지
+    var latlng = zoneMap.mouseEventToLatLng(e);
+    handleZonePick(latlng);
+  });
+
+  var midDrag = null;
+  container.addEventListener('mousedown', function(e){
+    if (e.button !== 1) return;
+    e.preventDefault();
+    midDrag = { startY: e.clientY, startZoom: zoneMap.getZoom(), anchorLatLng: zoneMap.mouseEventToLatLng(e) };
+  });
+  container.addEventListener('mousemove', function(e){
+    if (!midDrag) return;
+    var deltaY = midDrag.startY - e.clientY;
+    var newZoom = midDrag.startZoom + deltaY / 80;
+    newZoom = Math.max(zoneMap.getMinZoom(), Math.min(zoneMap.getMaxZoom(), newZoom));
+    zoneMap.setZoomAround(midDrag.anchorLatLng, newZoom, {animate:false});
+  });
+  window.addEventListener('mouseup', function(e){ if (e.button === 1) midDrag = null; });
+  container.addEventListener('auxclick', function(e){ if (e.button === 1) e.preventDefault(); });
+
+  container.addEventListener('mousemove', function(e){
+    if (!pendingPickLatLng) return;
+    var curLatLng = zoneMap.mouseEventToLatLng(e);
+    var previewBounds = L.latLngBounds(pendingPickLatLng, curLatLng);
+    if (previewRectLayer){
+      previewRectLayer.setBounds(previewBounds);
+    } else {
+      previewRectLayer = L.rectangle(previewBounds, {color:'#2f8fff', weight:2.5, fillColor:'#2f8fff', fillOpacity:0.08, dashArray:'6,5', interactive:false}).addTo(zoneMap);
+    }
+  });
+
+  var LONG_PRESS_MS = 550;
+  var LONG_PRESS_TOLERANCE = 12;
+  var touchPressTimer = null;
+  var touchPressStart = null;
+  var touchMoved = false;
+
+  container.addEventListener('touchstart', function(e){
+    if (e.touches.length !== 1){ clearTimeout(touchPressTimer); touchPressTimer = null; return; }
+    var t = e.touches[0];
+    touchPressStart = {x: t.clientX, y: t.clientY};
+    touchMoved = false;
+    clearTimeout(touchPressTimer);
+    touchPressTimer = setTimeout(function(){
+      if (touchMoved || !touchPressStart) return;
+      zoneMap.invalidateSize(); // 좌표 밀림 방지
+      var rect = container.getBoundingClientRect();
+      var containerPoint = L.point(touchPressStart.x - rect.left, touchPressStart.y - rect.top);
+      var latlng = zoneMap.containerPointToLatLng(containerPoint);
+      if (navigator.vibrate) navigator.vibrate(40);
+      handleZonePick(latlng);
+    }, LONG_PRESS_MS);
+  }, {passive:true});
+
+  container.addEventListener('touchmove', function(e){
+    if (!touchPressStart){ return; }
+    if (e.touches.length !== 1){ touchMoved = true; clearTimeout(touchPressTimer); return; }
+    var t = e.touches[0];
+    var dx = Math.abs(t.clientX - touchPressStart.x);
+    var dy = Math.abs(t.clientY - touchPressStart.y);
+    if (dx > LONG_PRESS_TOLERANCE || dy > LONG_PRESS_TOLERANCE){ touchMoved = true; clearTimeout(touchPressTimer); }
+  }, {passive:true});
+
+  container.addEventListener('touchend', function(){ clearTimeout(touchPressTimer); touchPressStart = null; }, {passive:true});
+  container.addEventListener('touchcancel', function(){ clearTimeout(touchPressTimer); touchPressStart = null; }, {passive:true});
+
+  // 무기 획득 지점 배치 모드일 때는 좌클릭(탭)으로 지점을 찍는다 (방장 전용)
+  container.addEventListener('click', function(e){
+    if (!pickupPlacementMode || !isRoomHost) return;
+    zoneMap.invalidateSize();
+    var latlng = zoneMap.mouseEventToLatLng(e);
+    placePickup(pickupPlacementMode, latlng);
+    pickupPlacementMode = null;
+    updatePickupTypeButtons();
+  });
+
+  // 페이지 스크롤/모바일 브라우저 주소창 접힘·펼침/화면 회전 등으로 지도 위치·크기가
+  // 바뀌었는데도 Leaflet이 예전 값을 캐싱하고 있으면 클릭 좌표가 조금씩 밀리는 문제가
+  // 있어서, 그럴 때마다 지도가 자기 크기를 다시 계산하도록 강제해준다.
+  var invalidateSizeDebounced = null;
+  function scheduleInvalidateSize(){
+    clearTimeout(invalidateSizeDebounced);
+    invalidateSizeDebounced = setTimeout(function(){ zoneMap.invalidateSize(); }, 150);
+  }
+  window.addEventListener('scroll', scheduleInvalidateSize, {passive:true});
+  window.addEventListener('resize', scheduleInvalidateSize);
+  window.addEventListener('orientationchange', scheduleInvalidateSize);
+  setTimeout(function(){ zoneMap.invalidateSize(); }, 300); // 최초 레이아웃 안정화 이후 한 번 보정
+
+  $("zone-hint").textContent = "* 지역 경계 데이터를 불러오는 중입니다...";
+
+  fetch(GEOJSON_URL)
+    .then(function(res){ if(!res.ok) throw new Error('fetch failed'); return res.json(); })
+    .then(function(geojson){
+      zoneLayer = L.geoJSON(geojson, {
+        style: function(){ return {color:'#20f0c0', weight:1, fillColor:'#0d4a3d', fillOpacity:0.25, interactive:false}; }
+      }).addTo(zoneMap);
+      var count = (geojson.features || []).length;
+      $("zone-hint").textContent = "* 지역 경계 데이터 로드 완료 (" + count + "개 지역).";
+    })
+    .catch(function(err){
+      $("zone-hint").textContent = "* 지역 경계 데이터를 불러오지 못했습니다. 지역 선택 없이 그냥 진행할 수 있습니다.";
+    });
+}
+
+/* =============== 무기 획득 지점 배치 (방장 전용, 소총/저격총) =============== */
+var pickupPlacementMode = null; // 지금 배치하려는 무기 키 (null이면 배치모드 아님)
+var pickupMarkers = {}; // {pickupId: L.Marker} - 설정화면 지도 위 표시용
+
+function pickupCategoryClass(weaponKey){
+  var cat = WEAPON_DEFS[weaponKey].category;
+  return cat === 'sniper' ? 'sniper-t' : 'rifle-t';
+}
+
+function renderPickupTypeButtons(){
+  var row = $("pickup-type-row");
+  row.innerHTML = "";
+  RIFLE_KEYS.concat(SNIPER_KEYS).forEach(function(wk){
+    var def = WEAPON_DEFS[wk];
+    var btn = document.createElement('div');
+    btn.className = 'pickup-type-btn ' + pickupCategoryClass(wk);
+    btn.textContent = def.label + ' 배치';
+    btn.setAttribute('data-weapon', wk);
+    btn.addEventListener('click', function(){
+      if (!isRoomHost){ toast("무기 획득 지점은 방장만 배치할 수 있습니다"); return; }
+      pickupPlacementMode = (pickupPlacementMode === wk) ? null : wk;
+      updatePickupTypeButtons();
+    });
+    row.appendChild(btn);
+  });
+  updatePickupTypeButtons();
+}
+
+function updatePickupTypeButtons(){
+  document.querySelectorAll('.pickup-type-btn').forEach(function(el){
+    el.classList.toggle('armed', el.getAttribute('data-weapon') === pickupPlacementMode);
+  });
+  var hint = $("pickup-placement-hint");
+  if (pickupPlacementMode){
+    hint.textContent = WEAPON_DEFS[pickupPlacementMode].label + " 배치 모드 - 지도를 한 번 클릭/탭하면 그 자리에 배치됩니다";
+  } else {
+    hint.textContent = "";
+  }
+}
+
+async function placePickup(weaponKey, latlng){
+  var pk = { id: uuid(), weapon: weaponKey, lat: latlng.lat, lng: latlng.lng };
+  pickups.push(pk);
+  await savePickups();
+  renderPickupMarker(pk);
+  renderPickupList();
+  toast(WEAPON_DEFS[weaponKey].label + " 획득 지점을 배치했습니다");
+}
+
+async function removePickup(pickupId){
+  pickups = pickups.filter(function(p){ return p.id !== pickupId; });
+  await savePickups();
+  if (pickupMarkers[pickupId]){ zoneMap.removeLayer(pickupMarkers[pickupId]); delete pickupMarkers[pickupId]; }
+  renderPickupList();
+}
+
+async function savePickups(){
+  if (!roomCode) return;
+  await storageSet(roomKey('pickups'), JSON.stringify(pickups), true);
+}
+
+async function loadPickups(){
+  var raw = await storageGet(roomKey('pickups'), true);
+  pickups = [];
+  if (raw){ try{ pickups = JSON.parse(raw); }catch(e){ pickups = []; } }
+  return pickups;
+}
+
+function pickupDivIcon(weaponKey){
+  var def = WEAPON_DEFS[weaponKey];
+  var color = (def.category === 'sniper') ? '#ff9d42' : '#4fc3ff';
+  return L.divIcon({
+    className: '',
+    html: '<div style="background:' + color + ';color:#02100f;font-family:Orbitron,sans-serif;font-size:9px;font-weight:700;padding:3px 6px;border-radius:3px;white-space:nowrap;box-shadow:0 0 6px ' + color + ';">' + def.label + '</div>',
+    iconSize: null
+  });
+}
+
+function renderPickupMarker(pk){
+  if (pickupMarkers[pk.id]){ zoneMap.removeLayer(pickupMarkers[pk.id]); }
+  var marker = L.marker([pk.lat, pk.lng], { icon: pickupDivIcon(pk.weapon), interactive: false }).addTo(zoneMap);
+  pickupMarkers[pk.id] = marker;
+}
+
+function renderAllPickupMarkers(){
+  Object.keys(pickupMarkers).forEach(function(id){ zoneMap.removeLayer(pickupMarkers[id]); });
+  pickupMarkers = {};
+  pickups.forEach(renderPickupMarker);
+}
+
+function renderPickupList(){
+  var list = $("pickup-list");
+  list.innerHTML = "";
+  pickups.forEach(function(pk){
+    var def = WEAPON_DEFS[pk.weapon];
+    var chip = document.createElement('div');
+    chip.className = 'pickup-chip';
+    var span = document.createElement('span');
+    span.textContent = def.label;
+    chip.appendChild(span);
+    if (isRoomHost){
+      var rm = document.createElement('span');
+      rm.className = 'pc-remove';
+      rm.textContent = '×';
+      rm.addEventListener('click', function(){ removePickup(pk.id); });
+      chip.appendChild(rm);
+    }
+    list.appendChild(chip);
+  });
+  $("pickup-setup-row").style.display = (isRoomHost || pickups.length > 0) ? 'block' : 'none';
+}
+
+/* =============== 게임 시작 =============== */
+async function doStartFlow(){
+  if (!myName || !selectedMode || !roomCode) return;
+
+  if (!('geolocation' in navigator)){
+    $("setup-error").textContent = "이 기기에서는 위치 정보를 사용할 수 없어 게임을 진행할 수 없습니다.";
+    return;
+  }
+
+  if (isRoomHost) await broadcastGameStart();
+
+  await requestOrientationAndMotionPermission();
+
+  $("start-btn").disabled = true;
+  $("start-btn").textContent = "위치 권한 확인 중...";
+
+  navigator.geolocation.getCurrentPosition(
+    async function(pos){
+      myLat = pos.coords.latitude;
+      myLng = pos.coords.longitude;
+      await saveProfile();
+      await startGame();
+    },
+    function(err){
+      $("setup-error").textContent = "위치 권한이 거부되었습니다. 브라우저 설정에서 위치 접근을 허용한 뒤 다시 시도해주세요.";
+      $("start-btn").disabled = false;
+      $("start-btn").textContent = "전투 시작";
+      gameAutoStarting = false;
+    },
+    {enableHighAccuracy:true, timeout:10000, maximumAge:0}
+  );
+}
+
+$("start-btn").addEventListener('click', async function(){
+  myName = $("nickname").value.trim();
+  await doStartFlow();
+});
+
+/* =============== 전투구역 판정 =============== */
+async function resolveBattleZone(){
+  if (zoneRectLayer){
+    var b = zoneRectLayer.getBounds();
+    battleZoneBounds = {south: b.getSouth(), west: b.getWest(), north: b.getNorth(), east: b.getEast()};
+    await storageSet(roomKey('zone'), JSON.stringify(battleZoneBounds), true);
+    return;
+  }
+  var raw = await storageGet(roomKey('zone'), true);
+  if (raw){ try{ battleZoneBounds = JSON.parse(raw); }catch(e){ battleZoneBounds = null; } }
+  else { battleZoneBounds = null; }
+}
+
+function isInsideZone(lat, lng){
+  if (!battleZoneBounds) return true;
+  return lat >= battleZoneBounds.south && lat <= battleZoneBounds.north &&
+         lng >= battleZoneBounds.west && lng <= battleZoneBounds.east;
+}
+
+function updateZoneStatusUI(){
+  var badge = $("zone-status-badge");
+  if (!badge) return;
+  if (!battleZoneBounds){
+    badge.textContent = "구역: 제한 없음";
+    badge.classList.remove('out');
+  } else if (outOfZone){
+    badge.textContent = "⚠ 전투구역 이탈! 발사 불가";
+    badge.classList.add('out');
+  } else {
+    badge.textContent = "구역 내부 (정상)";
+    badge.classList.remove('out');
+  }
+}
+
+/* =============== 무기 시스템 =============== */
+function initWeaponsForRole(){
+  if (myRole === 'bomber' || myRole === 'disposal'){
+    myWeapons = [];
+    currentWeaponKey = null;
+    weaponAmmo = {};
+    return;
+  }
+  myWeapons = PISTOL_KEYS.slice(); // 권총 4종은 항상 시작부터 소지
+  currentWeaponKey = myWeapons[0];
+  weaponAmmo = {};
+  myWeapons.forEach(function(wk){
+    var def = WEAPON_DEFS[wk];
+    weaponAmmo[wk] = {mag: def.mag, reserve: def.mag * 5};
+  });
+}
+
+function acquireWeapon(weaponKey){
+  var def = WEAPON_DEFS[weaponKey];
+  if (!def) return;
+  if (myWeapons.indexOf(weaponKey) !== -1) return; // 이미 보유중
+  myWeapons.push(weaponKey);
+  weaponAmmo[weaponKey] = {mag: def.mag, reserve: def.mag * 5};
+  currentWeaponKey = weaponKey; // 획득 즉시 그 무기로 전환
+  updateAmmoUI();
+  toast(def.label + " 획득! 예비탄창 " + (def.mag*5) + "발");
+  if (navigator.vibrate) navigator.vibrate([40,30,40]);
+}
+
+var nearestPickupInRange = null; // {id, weapon, lat, lng}
+function updateNearestPickup(){
+  nearestPickupInRange = null;
+  if (myLat === null || myLng === null || myRole === 'bomber' || myRole === 'disposal') return;
+  var best = null, bestD = Infinity;
+  pickups.forEach(function(pk){
+    if (myWeapons.indexOf(pk.weapon) !== -1) return; // 이미 보유한 무기는 대상 제외
+    var d = distanceMeters(myLat, myLng, pk.lat, pk.lng);
+    if (d <= PICKUP_RANGE && d < bestD){ best = pk; bestD = d; }
+  });
+  nearestPickupInRange = best;
+
+  var btn = $("acquire-btn");
+  if (nearestPickupInRange){
+    btn.style.display = 'flex';
+    $("acquire-weapon-label").textContent = WEAPON_DEFS[nearestPickupInRange.weapon].label;
+  } else {
+    btn.style.display = 'none';
+  }
+}
+
+$("acquire-btn").addEventListener('click', function(){
+  if (!nearestPickupInRange) return;
+  acquireWeapon(nearestPickupInRange.weapon);
+  updateNearestPickup();
+});
+
+function gunSvg(category, color){
+  if (category === 'pistol'){
+    return '<svg viewBox="0 0 120 60" width="88" height="44">' +
+      '<rect x="8" y="24" width="66" height="13" rx="4" fill="' + color + '"/>' +
+      '<rect x="68" y="18" width="18" height="9" rx="2" fill="' + color + '" opacity="0.85"/>' +
+      '<path d="M18 37 L18 55 L32 55 L32 37 Z" fill="' + color + '" opacity="0.65"/>' +
+      '<circle cx="84" cy="23" r="3" fill="#ffffff" opacity="0.9"/>' +
+      '</svg>';
+  } else if (category === 'rifle'){
+    return '<svg viewBox="0 0 170 60" width="150" height="50">' +
+      '<rect x="5" y="26" width="126" height="11" rx="3" fill="' + color + '"/>' +
+      '<rect x="126" y="20" width="32" height="8" rx="2" fill="' + color + '" opacity="0.85"/>' +
+      '<rect x="34" y="37" width="10" height="17" fill="' + color + '" opacity="0.65"/>' +
+      '<rect x="0" y="30" width="14" height="6" fill="' + color + '" opacity="0.55"/>' +
+      '<circle cx="156" cy="24" r="3" fill="#ffffff" opacity="0.9"/>' +
+      '</svg>';
+  }
+  // sniper
+  return '<svg viewBox="0 0 190 60" width="170" height="48">' +
+    '<rect x="5" y="28" width="158" height="9" rx="3" fill="' + color + '"/>' +
+    '<rect x="42" y="10" width="46" height="9" rx="4" fill="' + color + '" opacity="0.85"/>' +
+    '<circle cx="42" cy="14" r="6" fill="#04100f" stroke="' + color + '" stroke-width="2"/>' +
+    '<circle cx="88" cy="14" r="6" fill="#04100f" stroke="' + color + '" stroke-width="2"/>' +
+    '<rect x="32" y="37" width="10" height="17" fill="' + color + '" opacity="0.65"/>' +
+    '<circle cx="178" cy="32" r="4" fill="#ffffff" opacity="0.9"/>' +
+    '</svg>';
+}
+
+var lastGunVisualKey = null;
+function updateGunVisual(){
+  var el = $("gun-visual");
+  if (!currentWeaponKey){ el.innerHTML = ''; lastGunVisualKey = null; return; }
+  var key = currentWeaponKey + '|' + myTeamColor;
+  if (key === lastGunVisualKey) return;
+  lastGunVisualKey = key;
+  var def = WEAPON_DEFS[currentWeaponKey];
+  el.innerHTML = gunSvg(def.category, myTeamColor);
+}
+
+function updateAmmoUI(){
+  var hasWeapon = myWeapons && myWeapons.length > 0;
+
+  $("fire-btn").style.display = (hasWeapon && myRole !== 'bomber' && myRole !== 'disposal') ? 'flex' : 'none';
+  $("reload-btn").style.display = hasWeapon ? 'flex' : 'none';
+  $("ammo-box").style.display = hasWeapon ? 'block' : 'none';
+  $("gun-visual").style.display = hasWeapon ? 'flex' : 'none';
+  $("swap-btn").style.display = (hasWeapon && myWeapons.length > 1) ? 'flex' : 'none';
+  $("no-weapon-msg").style.display = hasWeapon ? 'none' : 'block';
+
+  $("plant-btn").style.display = (myRole === 'bomber' && !gameState.bombPlantedAt) ? 'flex' : 'none';
+  $("defuse-btn").style.display = (myRole === 'disposal') ? 'flex' : 'none';
+
+  if (hasWeapon){
+    var def = WEAPON_DEFS[currentWeaponKey];
+    var am = weaponAmmo[currentWeaponKey];
+    $("weapon-name-label").textContent = def.label;
+    $("ammo-cur").textContent = am.mag;
+    $("ammo-reserve").textContent = am.reserve;
+    $("swap-weapon-label").textContent = def.label;
+    updateGunVisual();
+  }
+
+  var fireDisabled = !hasWeapon || safetyOn || !canFire || !isAlive || outOfZone || reloading ||
+                      (currentWeaponKey && weaponAmmo[currentWeaponKey] && weaponAmmo[currentWeaponKey].mag <= 0);
+  if (myMode === 'ctto' && mySide === 'ct' && !gameState.ctGunsActive) fireDisabled = true;
+  if (gameState.winner) fireDisabled = true;
+  $("fire-btn").classList.toggle('disabled', fireDisabled);
+
+  var defuseDisabled = !canAttemptDefuse();
+  $("defuse-btn").classList.toggle('disabled', defuseDisabled);
+}
+
+$("swap-btn").addEventListener('click', function(){
+  if (!myWeapons || myWeapons.length < 2) return;
+  var idx = myWeapons.indexOf(currentWeaponKey);
+  currentWeaponKey = myWeapons[(idx + 1) % myWeapons.length];
+  updateAmmoUI();
+  toast(WEAPON_DEFS[currentWeaponKey].label + "(으)로 교체");
+});
+
+$("safety-btn").addEventListener('click', function(){
+  safetyOn = !safetyOn;
+  var label = $("safety-state-label");
+  label.textContent = safetyOn ? "ON" : "OFF";
+  label.className = safetyOn ? "safety-state-on" : "safety-state-off";
+  updateAmmoUI();
+  toast(safetyOn ? "안전모드 ON - 발사되지 않습니다" : "안전모드 OFF");
+});
+
+$("reload-btn").addEventListener('click', function(){
+  if (!currentWeaponKey || reloading || !isAlive) return;
+  var am = weaponAmmo[currentWeaponKey];
+  var def = WEAPON_DEFS[currentWeaponKey];
+  if (am.mag === def.mag){ toast("이미 탄창이 가득 찼습니다"); return; }
+  if (am.reserve <= 0){ toast("예비 탄약이 없습니다"); return; }
+  reloading = true;
+  $("reload-btn").classList.add('disabled');
+  setTimeout(function(){
+    var need = def.mag - am.mag;
+    var take = Math.min(need, am.reserve);
+    am.mag += take;
+    am.reserve -= take;
+    reloading = false;
+    $("reload-btn").classList.remove('disabled');
+    updateAmmoUI();
+    toast("장전 완료");
+  }, 1200);
+});
+
+/* =============== 사운드 =============== */
+function getAudioCtx(){
+  if (!audioCtx){
+    var AC = window.AudioContext || window.webkitAudioContext;
+    audioCtx = new AC();
+  }
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  return audioCtx;
+}
+
+function playWeaponSound(weaponKey){
+  try{
+    var def = WEAPON_DEFS[weaponKey];
+    var snd = (def && def.snd) ? def.snd : {freq:1200, decay:5, dur:0.25, loud:0.5};
+    var ctx = getAudioCtx();
+    var dur = snd.dur;
+    var bufferSize = Math.floor(ctx.sampleRate * dur);
+    var buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+    var data = buffer.getChannelData(0);
+    for (var i=0;i<bufferSize;i++){
+      var decay = Math.pow(1 - i/bufferSize, snd.decay);
+      data[i] = (Math.random()*2 - 1) * decay;
+    }
+    var noise = ctx.createBufferSource();
+    noise.buffer = buffer;
+
+    var filter = ctx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(snd.freq * 2.2, ctx.currentTime);
+    filter.frequency.exponentialRampToValueAtTime(Math.max(60, snd.freq * 0.15), ctx.currentTime + dur);
+
+    var gain = ctx.createGain();
+    gain.gain.setValueAtTime(snd.loud, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + dur);
+
+    noise.connect(filter); filter.connect(gain); gain.connect(ctx.destination);
+    noise.start();
+
+    // 무기 특유의 "톤"을 얇게 얹어서 총기마다 더 구분되게 만든다 (미래형 총기 느낌의 삐- 소리)
+    var osc = ctx.createOscillator();
+    osc.type = (def && def.category === 'sniper') ? 'sawtooth' : 'square';
+    osc.frequency.setValueAtTime(snd.freq, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(Math.max(80, snd.freq * 0.4), ctx.currentTime + dur * 0.6);
+    var oscGain = ctx.createGain();
+    oscGain.gain.setValueAtTime(snd.loud * 0.25, ctx.currentTime);
+    oscGain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + dur * 0.6);
+    osc.connect(oscGain); oscGain.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + dur * 0.6 + 0.02);
+  }catch(e){ console.warn('사운드 재생 실패', e); }
+}
+
+function playExplosionSound(){
+  try{
+    var ctx = getAudioCtx();
+    var dur = 1.8;
+    var bufferSize = Math.floor(ctx.sampleRate * dur);
+    var buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+    var data = buffer.getChannelData(0);
+    for (var i=0;i<bufferSize;i++){
+      var decay = Math.pow(1 - i/bufferSize, 2.2);
+      data[i] = (Math.random()*2 - 1) * decay;
+    }
+    var noise = ctx.createBufferSource();
+    noise.buffer = buffer;
+    var filter = ctx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(900, ctx.currentTime);
+    filter.frequency.exponentialRampToValueAtTime(40, ctx.currentTime + dur);
+    var gain = ctx.createGain();
+    gain.gain.setValueAtTime(1, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + dur);
+    noise.connect(filter); filter.connect(gain); gain.connect(ctx.destination);
+    noise.start();
+  }catch(e){ console.warn('폭발음 재생 실패', e); }
+}
+
+/* =============== 발사 =============== */
+
+function currentWeaponFireRate(){
+  var def = WEAPON_DEFS[currentWeaponKey];
+  return (def && def.fireRate) ? def.fireRate : null;
+}
+
+async function fireOnce(){
+  if (!isAlive){ toast("전사 상태에서는 발사할 수 없습니다"); return; }
+  if (myRole === 'bomber' || myRole === 'disposal'){ toast("이 역할은 무기를 사용할 수 없습니다"); return; }
+  if (gameState.winner){ toast("게임이 종료되었습니다"); return; }
+  if (outOfZone){ toast("전투구역을 이탈하여 발사할 수 없습니다"); return; }
+  if (safetyOn){ toast("안전모드를 해제하세요"); return; }
+  if (!canFire){ toast("스턴 상태입니다. 폰을 흔들어 해제하세요"); return; }
+  if (reloading){ toast("장전 중입니다"); return; }
+  if (myMode === 'ctto' && mySide === 'ct' && !gameState.ctGunsActive){ toast("아직 무기가 활성화되지 않았습니다"); return; }
+  var weaponDef = WEAPON_DEFS[currentWeaponKey];
+  var am = weaponAmmo[currentWeaponKey];
+  if (!weaponDef || !am || am.mag <= 0){ toast("탄약이 없습니다. 장전하세요"); return; }
+  if (myLat === null || myLng === null){ toast("위치 정보를 확인 중입니다..."); return; }
+
+  am.mag--;
+  updateAmmoUI();
+  playWeaponSound(currentWeaponKey);
+  if (navigator.vibrate) navigator.vibrate(weaponDef.damage >= 20 ? 60 : 30);
+
+  var gun = $("gun-visual");
+  gun.classList.add('recoil');
+  setTimeout(function(){ gun.classList.remove('recoil'); }, 90);
+
+  var myLatSnap = myLat, myLngSnap = myLng, myIdSnap = myId, myHeadingSnap = myHeading;
+  var modeSnap = myMode, sideSnap = mySide, teamSnap = myTeam, dmg = weaponDef.damage;
+  var hitCount = 0;
+  var nearestMiss = null; // 빗나갔을 때 이유를 알려주기 위한 디버그 정보
+
+  await updateSharedPlayers(function(players){
+    var keys = Object.keys(players);
+    for (var i=0;i<keys.length;i++){
+      var pid = keys[i];
+      if (pid === myIdSnap) continue;
+      var target = players[pid];
+      if (!target || target.alive === false) continue;
+      if (typeof target.lat !== 'number' || typeof target.lng !== 'number') continue;
+
+      if (modeSnap === 'ctto'){
+        if (target.side === sideSnap) continue;
+      } else if (MODES[modeSnap].teamMode === 'redblue'){
+        if (target.team === teamSnap) continue;
+      }
+      // ffa: 조건 없음 (전원 대상, 팀킬 개념 자체가 없음)
+
+      var d = distanceMeters(myLatSnap, myLngSnap, target.lat, target.lng);
+      var tooFar = (d > HIT_MAX_RANGE || d < HIT_MIN_RANGE);
+
+      if (!tooFar){
+        target.hp = Math.max(0, (target.hp || 0) - dmg);
+        target.lastHitTime = Date.now();
+        if (target.hp <= 0) target.alive = false;
+        hitCount++;
+      } else if (!nearestMiss || d < nearestMiss.d){
+        nearestMiss = {d: d, tooFar: tooFar};
+      }
+    }
+  });
+
+  if (hitCount === 0){
+    if (nearestMiss){
+      var msg = "빗나감 - 가장 가까운 대상: " + nearestMiss.d.toFixed(1) + "m (사거리 " + HIT_MIN_RANGE + "~" + HIT_MAX_RANGE + "m 벗어남)";
+      toast(msg);
+    } else {
+      toast("사거리 내에 대상이 없습니다 (위치 정보가 아직 갱신 안 됐을 수 있음)");
+    }
+  }
+}
+
+function stopAutoFire(){
+  clearInterval(autoFireTimer);
+  autoFireTimer = null;
+}
+
+$("fire-btn").addEventListener('pointerdown', function(e){
+  e.preventDefault();
+  var rate = currentWeaponFireRate();
+  fireOnce();
+  if (rate){
+    stopAutoFire();
+    autoFireTimer = setInterval(fireOnce, Math.round(1000 / rate));
+  }
+});
+$("fire-btn").addEventListener('pointerup', stopAutoFire);
+$("fire-btn").addEventListener('pointerleave', stopAutoFire);
+$("fire-btn").addEventListener('pointercancel', stopAutoFire);
+$("fire-btn").addEventListener('contextmenu', function(e){ e.preventDefault(); });
+
+/* =============== 폭탄 설치 (폭탄 설치반 전용) =============== */
+$("plant-btn").addEventListener('click', async function(){
+  if (myRole !== 'bomber' || !isAlive) return;
+  if (gameState.bombPlantedAt){ toast("이미 설치되었습니다"); return; }
+  if (myLat === null || myLng === null){ toast("위치 확인 중..."); return; }
+  await updateGameState(function(state){
+    if (state.bombPlantedAt) return;
+    state.bombLat = myLat;
+    state.bombLng = myLng;
+    state.bombPlantedAt = Date.now();
+    state.ctGunsActive = true;
+  });
+  toast("폭탄을 설치했습니다! 대테러팀에게 신고가 접수됩니다.");
+  if (navigator.vibrate) navigator.vibrate([100,50,100,50,200]);
+  updateAmmoUI();
+});
+
+/* =============== 폭탄 해체 (폭탄처리반 전용, 30초 꾹 누르기) =============== */
+var defuseTimer = null;
+
+function canAttemptDefuse(){
+  if (myRole !== 'disposal' || !isAlive) return false;
+  if (!gameState.bombPlantedAt || gameState.bombDefusedAt || gameState.winner) return false;
+  if (myLat === null || myLng === null) return false;
+  if (typeof gameState.bombLat !== 'number') return false;
+  var d = distanceMeters(myLat, myLng, gameState.bombLat, gameState.bombLng);
+  return d <= BOMB_DEFUSE_RANGE;
+}
+
+function defuseStartHold(e){
+  e.preventDefault();
+  if (!canAttemptDefuse()){ toast("폭탄 근처(약 " + BOMB_DEFUSE_RANGE + "m 이내)에서만 해체할 수 있습니다"); return; }
+  var bar = $("defuse-progress");
+  bar.style.transition = 'height ' + (BOMB_DEFUSE_HOLD_MS/1000) + 's linear';
+  bar.style.height = '100%';
+  defuseTimer = setTimeout(async function(){
+    var newState = await updateGameState(function(state){
+      if (!state.bombDefusedAt && !state.winner){
+        state.bombDefusedAt = Date.now();
+        state.winner = 'ct';
+        state.winReason = 'defused';
+      }
+    });
+    gameState = newState;
+    await updateSharedPlayers(function(players){
+      Object.keys(players).forEach(function(pid){
+        if (players[pid].side === 'terrorist') players[pid].alive = false;
+      });
+    });
+    bar.style.transition = 'none';
+    bar.style.height = '0%';
+    toast("폭탄 해체 성공!");
+  }, BOMB_DEFUSE_HOLD_MS);
+}
+
+function defuseCancelHold(){
+  clearTimeout(defuseTimer);
+  var bar = $("defuse-progress");
+  bar.style.transition = 'height .2s ease';
+  bar.style.height = '0%';
+}
+
+var defuseBtn = $("defuse-btn");
+defuseBtn.addEventListener('pointerdown', defuseStartHold);
+defuseBtn.addEventListener('pointerup', defuseCancelHold);
+defuseBtn.addEventListener('pointerleave', defuseCancelHold);
+defuseBtn.addEventListener('pointercancel', defuseCancelHold);
+defuseBtn.addEventListener('contextmenu', function(e){ e.preventDefault(); });
+
+/* =============== 위치 노출 (핑) - 대테러전: 테러진영 2분 / 그 외 모드: 전원 1분 =============== */
+async function maybeSendPositionPing(){
+  if (!isAlive) return;
+  if (myLat === null || myLng === null) return;
+
+  var interval;
+  if (myMode === 'ctto'){
+    if (mySide !== 'terrorist') return; // 대테러팀은 노출되지 않음(원래 설계 유지)
+    interval = TERRORIST_PING_INTERVAL_MS;
+  } else {
+    interval = ENEMY_PING_INTERVAL_MS; // ffa/레드블루 모드: 전원 대상 (상호 노출)
+  }
+
+  var now = Date.now();
+  if (now - lastPingSentAt < interval) return;
+  lastPingSentAt = now;
+
+  var raw = await storageGet(roomKey('positionPings'), true);
+  var pings = {};
+  if (raw){ try{ pings = JSON.parse(raw); }catch(e){} }
+  pings[myId] = {name: myName, lat: myLat, lng: myLng, ts: now};
+  await storageSet(roomKey('positionPings'), JSON.stringify(pings), true);
+}
+
+/* =============== 무전 (대테러팀 전용, 텍스트 기반) =============== */
+$("radio-toggle").addEventListener('click', function(){
+  $("radio-drawer").classList.toggle('open');
+});
+
+async function sendRadioMessage(textOverride){
+  if (myMode !== 'ctto' || mySide !== 'ct') return;
+  if (!isAlive){ toast("전사 상태에서는 무전을 보낼 수 없습니다"); return; }
+  var input = $("radio-input");
+  var text = (typeof textOverride === 'string') ? textOverride.trim() : input.value.trim();
+  if (!text) return;
+  input.value = '';
+  var raw = await storageGet(roomKey('radio'), true);
+  var log = [];
+  if (raw){ try{ log = JSON.parse(raw); }catch(e){} }
+  log.push({id: myId, name: myName, text: text, ts: Date.now()});
+  if (log.length > 40) log = log.slice(log.length - 40);
+  await storageSet(roomKey('radio'), JSON.stringify(log), true);
+}
+
+/* ---- 무전 음성 인식 (말하는 내용을 텍스트로 바꿔서 자동 송신) ---- */
+var radioRecognition = null;
+var radioListening = false;
+
+function initRadioVoice(){
+  var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR){
+    $("radio-voice-btn").style.display = 'none';
+    $("radio-voice-status").textContent = '이 브라우저는 음성 인식을 지원하지 않습니다. 텍스트로 입력해주세요.';
+    return;
+  }
+  radioRecognition = new SR();
+  radioRecognition.lang = 'ko-KR';
+  radioRecognition.interimResults = false;
+  radioRecognition.maxAlternatives = 1;
+
+  radioRecognition.onresult = function(e){
+    var text = e.results[0][0].transcript;
+    if (text) sendRadioMessage(text);
+  };
+  radioRecognition.onerror = function(e){
+    $("radio-voice-status").textContent = '음성 인식 오류: ' + e.error;
+    stopRadioListening();
+  };
+  radioRecognition.onend = function(){
+    stopRadioListening();
+  };
+}
+
+function startRadioListening(){
+  if (!radioRecognition || radioListening) return;
+  if (myMode !== 'ctto' || mySide !== 'ct'){ toast("무전은 대테러팀만 사용할 수 있습니다"); return; }
+  if (!isAlive){ toast("전사 상태에서는 무전을 보낼 수 없습니다"); return; }
+  try{
+    radioRecognition.start();
+    radioListening = true;
+    $("radio-voice-btn").classList.add('listening');
+    $("radio-voice-status").textContent = '듣는 중... 말씀하세요';
+  }catch(e){ /* 이미 실행 중인 경우 등은 무시 */ }
+}
+
+function stopRadioListening(){
+  radioListening = false;
+  $("radio-voice-btn").classList.remove('listening');
+  $("radio-voice-status").textContent = '';
+  if (radioRecognition){
+    try{ radioRecognition.stop(); }catch(e){}
+  }
+}
+
+var radioVoiceBtn = $("radio-voice-btn");
+radioVoiceBtn.addEventListener('pointerdown', function(e){ e.preventDefault(); startRadioListening(); });
+radioVoiceBtn.addEventListener('pointerup', function(e){ e.preventDefault(); stopRadioListening(); });
+radioVoiceBtn.addEventListener('pointerleave', function(){ if (radioListening) stopRadioListening(); });
+radioVoiceBtn.addEventListener('contextmenu', function(e){ e.preventDefault(); });
+
+$("radio-send-btn").addEventListener('click', sendRadioMessage);
+$("radio-input").addEventListener('keydown', function(e){
+  if (e.key === 'Enter'){ e.preventDefault(); sendRadioMessage(); }
+});
+
+function renderRadioLog(log, players){
+  var container = $("radio-log");
+  container.innerHTML = "";
+  log.forEach(function(m){
+    var isDead = players && players[m.id] && players[m.id].alive === false;
+    var div = document.createElement('div');
+    div.className = 'radio-msg' + (isDead ? ' dead' : '');
+    div.innerHTML = '<span class="rm-name">' + escapeHtml(m.name) + (isDead ? ' [무전끊김]' : '') + ': </span>' +
+                     '<span class="rm-text">' + escapeHtml(m.text) + '</span>';
+    container.appendChild(div);
+  });
+  container.scrollTop = container.scrollHeight;
+}
+
+/* =============== 방향 센서(나침반) / 모션 센서(흔들기) =============== */
+async function requestOrientationAndMotionPermission(){
+  try{
+    if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function'){
+      var res = await DeviceOrientationEvent.requestPermission();
+      if (res === 'granted') bindOrientation();
+    } else {
+      bindOrientation();
+    }
+  }catch(e){ console.warn('방향 센서 권한 요청 실패', e); }
+
+  try{
+    if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function'){
+      var res2 = await DeviceMotionEvent.requestPermission();
+      if (res2 === 'granted') bindMotion();
+    } else {
+      bindMotion();
+    }
+  }catch(e){ console.warn('모션 센서 권한 요청 실패', e); }
+}
+
+function bindOrientation(){
+  if (orientationBound) return;
+  orientationBound = true;
+  var handler = function(e){
+    var heading;
+
+    if (typeof e.webkitCompassHeading === 'number'){
+      // iOS: OS가 이미 기기 자세(세로/가로 포함)를 반영해 정확한 나침반 값을 주므로 추가 보정을 하지 않는다.
+      heading = e.webkitCompassHeading;
+    } else if (typeof e.alpha === 'number'){
+      // 그 외(Android 등): alpha는 화면 회전 상태를 반영하지 않으므로, 화면 회전 각도를 직접 보정해준다.
+      var screenAngle = 0;
+      try{
+        if (screen.orientation && typeof screen.orientation.angle === 'number'){ screenAngle = screen.orientation.angle; }
+        else if (typeof window.orientation === 'number'){ screenAngle = window.orientation; }
+      }catch(err){}
+      heading = 360 - e.alpha + screenAngle;
+    } else {
+      return;
+    }
+    myHeading = ((heading % 360) + 360) % 360;
+  };
+  if ('ondeviceorientationabsolute' in window){
+    window.addEventListener('deviceorientationabsolute', handler, true);
+  } else {
+    window.addEventListener('deviceorientation', handler, true);
+  }
+}
+
+function bindMotion(){
+  if (motionBound) return;
+  motionBound = true;
+  window.addEventListener('devicemotion', function(e){
+    var acc = e.accelerationIncludingGravity || e.acceleration;
+    if (!acc || typeof acc.x !== 'number') return;
+    if (lastAccel){
+      var delta = Math.abs(acc.x - lastAccel.x) + Math.abs(acc.y - lastAccel.y) + Math.abs(acc.z - lastAccel.z);
+      var now = Date.now();
+      if (delta > SHAKE_THRESHOLD && (now - lastShakeTime) > SHAKE_MIN_INTERVAL_MS){
+        lastShakeTime = now;
+        onShakeDetected();
+      }
+    }
+    lastAccel = {x: acc.x, y: acc.y, z: acc.z};
+  }, true);
+}
+
+function onShakeDetected(){
+  if (!isAlive || canFire) return;
+  shakeCount++;
+  var pct = Math.min(100, (shakeCount / SHAKE_RELEASE_NEEDED) * 100);
+  var bar = $("shake-progress");
+  if (bar) bar.style.height = pct + '%';
+  if (navigator.vibrate) navigator.vibrate(20);
+  if (shakeCount >= SHAKE_RELEASE_NEEDED) releaseStun();
+}
+
+function releaseStun(){
+  canFire = true;
+  shakeCount = 0;
+  var bar = $("shake-progress");
+  if (bar) bar.style.height = '0%';
+  $("hit-overlay").classList.remove('show');
+  updateAmmoUI();
+  toast("스턴 해제! 다시 발사할 수 있습니다");
+}
+
+/* =============== HP UI (모드별 가변 개수) =============== */
+function renderHp(hp){
+  hp = Math.max(0, hp);
+  $("hp-number").textContent = hp;
+  var pct = Math.max(0, Math.min(100, (hp / MAX_HP) * 100));
+  var bar = $("hp-bar-fill");
+  if (bar) bar.style.width = pct + '%';
+}
+
+/* =============== 모드/역할 표시 =============== */
+var headingReadoutTimer = null;
+function updateHeadingReadout(){
+  var el = $("heading-readout");
+  if (!el) return;
+  if (myHeading === null){
+    el.textContent = "방향: 신호 없음 (나침반 미지원/권한 거부)";
+    el.classList.add('no-signal');
+  } else {
+    el.textContent = "방향: " + Math.round(myHeading) + "° (참고용 - 명중 판정에는 영향 없음, 거리로만 판정)";
+    el.classList.remove('no-signal');
+  }
+}
+
+var rotateHintDismissed = false;
+function updateRotateHint(){
+  var el = $("rotate-hint");
+  var isPortrait = window.innerHeight > window.innerWidth;
+  el.classList.toggle('show', isPortrait && !rotateHintDismissed);
+}
+$("rotate-hint").addEventListener('click', function(){
+  rotateHintDismissed = true;
+  $("rotate-hint").classList.remove('show');
+});
+
+function updateModeTopbar(){
+  $("mt-room-label").textContent = "방: " + (roomCode || '-');
+  $("mt-mode-label").textContent = MODES[myMode].label;
+  var badge = $("mt-role-label");
+  badge.classList.remove('side-terrorist');
+  var roleText = '';
+  if (myMode === 'ctto'){
+    var roleNames = {terrorist:'테러리스트', bomber:'폭탄 설치반', ct:'대테러 특수전단', disposal:'폭탄처리반'};
+    roleText = roleNames[myRole] || myRole;
+    if (mySide === 'terrorist') badge.classList.add('side-terrorist');
+  } else if (MODES[myMode].teamMode === 'redblue'){
+    roleText = (myTeam === 'red') ? '레드팀' : '블루팀';
+    if (myTeam === 'red') badge.classList.add('side-terrorist');
+  } else {
+    roleText = '개인전';
+  }
+  badge.textContent = roleText;
+}
+
+function updateStatusTitles(){
+  if (myMode === 'ctto'){
+    $("enemy-status-title").textContent = (mySide === 'ct') ? '테러리스트 현황(2분 주기)' : '대테러팀 생존 현황';
+    $("ally-status-title").textContent = (mySide === 'ct') ? '대테러팀 생존 현황' : '테러리스트 생존 현황';
+  } else if (MODES[myMode].teamMode === 'redblue'){
+    $("enemy-status-title").textContent = (myTeam === 'red') ? '블루팀 생존 현황' : '레드팀 생존 현황';
+    $("ally-status-title").textContent = (myTeam === 'red') ? '레드팀 생존 현황' : '블루팀 생존 현황';
+  } else {
+    $("enemy-status-title").textContent = '';
+    $("ally-status-title").textContent = '전체 생존 현황';
+  }
+}
+
+function updateRadarLegend(){
+  var el = $("radar-legend");
+  if (myMode === 'ffa'){
+    el.innerHTML = '● 나<br>○ 다른 참가자 (1분마다 5초간 노출)';
+  } else if (myMode === 'ctto' && mySide === 'ct'){
+    el.innerHTML = '● 나 &nbsp;▲ 대테러팀<br>○ 테러리스트(2분마다 5초간 노출)';
+  } else if (myMode === 'ctto'){
+    el.textContent = '● 나 ▲ 같은 편(테러리스트)';
+  } else {
+    el.innerHTML = '● 나 &nbsp;▲ 아군<br>○ 적팀 (1분마다 5초간 노출)';
+  }
+}
+
+function setupRoleSpecificUI(){
+  $("enemy-status-panel").style.display = (myMode === 'ffa') ? 'none' : 'flex';
+  $("radio-toggle").style.display = (myMode === 'ctto' && mySide === 'ct') ? 'flex' : 'none';
+  $("radio-drawer").classList.remove('open');
+  if (myMode === 'ctto' && mySide === 'ct' && !radioRecognition){ initRadioVoice(); }
+  updateStatusTitles();
+  updateRadarLegend();
+  updateBombStatusUI();
+}
+
+/* =============== 게임 시작 =============== */
+async function startGame(){
+  clearInterval(guestZonePollTimer);
+  $("screen-setup").classList.remove('active');
+  $("screen-game").classList.add('active');
+  updateRotateHint();
+  window.addEventListener('resize', updateRotateHint);
+  clearInterval(headingReadoutTimer);
+  headingReadoutTimer = setInterval(updateHeadingReadout, 300);
+
+  myMode = selectedMode;
+  var conf = MODES[myMode];
+
+  if (myMode === 'ctto'){
+    myRole = myCttoRole;
+    mySide = myCttoSide;
+  } else if (conf.teamMode === 'redblue'){
+    myRole = 'combat';
+    mySide = myTeam;
+  } else {
+    myRole = 'combat';
+    mySide = null;
+  }
+
+  MAX_HP = 100;
+  isAlive = true;
+  canFire = true;
+  safetyOn = false;
+  gameState = {};
+
+  // 팀 테마색: 레드팀/테러리스트=주황, 그 외(블루팀/대테러팀/개인전)=하늘색
+  myTeamColor = (mySide === 'red' || mySide === 'terrorist') ? '#ff9d42' : '#4fc3ff';
+  document.documentElement.style.setProperty('--team-color', myTeamColor);
+
+  initWeaponsForRole();
+  renderHp(MAX_HP);
+  $("safety-state-label").textContent = "OFF";
+  $("safety-state-label").className = "safety-state-off";
+  updateModeTopbar();
+  setupRoleSpecificUI();
+  updateAmmoUI();
+
+  await resolveBattleZone();
+  outOfZone = !isInsideZone(myLat, myLng);
+  updateZoneStatusUI();
+  if (outOfZone) toast("현재 전투구역 밖에 있습니다! 구역 안으로 이동해야 발사할 수 있습니다");
+
+  geoWatchId = navigator.geolocation.watchPosition(function(pos){
+    myLat = pos.coords.latitude;
+    myLng = pos.coords.longitude;
+    updateNearestPickup();
+    var nowOut = !isInsideZone(myLat, myLng);
+    if (nowOut !== outOfZone){
+      outOfZone = nowOut;
+      updateZoneStatusUI();
+      updateAmmoUI();
+      toast(outOfZone ? "전투구역을 이탈했습니다! 발사할 수 없습니다" : "전투구역으로 복귀했습니다");
+    }
+  }, function(err){ console.warn('위치 추적 오류', err); }, {enableHighAccuracy:true, maximumAge:2000, timeout:10000});
+
+  initGameMap();
+  await syncPlayers();
+  syncTimer = setInterval(syncPlayers, SYNC_INTERVAL_MS);
+
+  if (myMode === 'ctto'){
+    if (mySide === 'terrorist'){
+      toast("테러리스트가 먼저 출발합니다. 폭탄을 설치하세요!");
+    } else {
+      toast("대테러팀: 폭탄 설치 신고가 접수될 때까지 무기가 비활성 상태입니다.");
+    }
+  }
+}
+
+/* =============== 피격 감지 및 상태 처리 =============== */
+function handleMyState(me){
+  if (!me) return;
+  renderHp(me.hp);
+
+  if (me.lastHitTime && me.lastHitTime > lastSeenHitTime){
+    lastSeenHitTime = me.lastHitTime;
+    if (navigator.vibrate) navigator.vibrate([250,100,250,100,250]);
+    document.body.classList.add('screen-shake');
+    setTimeout(function(){ document.body.classList.remove('screen-shake'); }, 400);
+
+    if (me.hp <= 0){
+      isAlive = false;
+      $("hit-overlay").classList.remove('show');
+      $("death-overlay").classList.add('show');
+    } else {
+      canFire = false;
+      shakeCount = 0;
+      var shakeBar = $("shake-progress");
+      if (shakeBar) shakeBar.style.height = '0%';
+      $("hit-overlay").classList.add('show');
+    }
+    updateAmmoUI();
+  }
+
+  if (me.alive === false && isAlive){
+    isAlive = false;
+    $("hit-overlay").classList.remove('show');
+    $("death-overlay").classList.add('show');
+    updateAmmoUI();
+  }
+}
+
+/* =============== 생존 현황 표시 =============== */
+function renderStatusList(containerId, filterFn, players){
+  var container = $(containerId);
+  container.innerHTML = "";
+  var list = Object.keys(players).map(function(k){ return players[k]; }).filter(filterFn);
+  var slotCount = Math.max(3, list.length);
+  for (var i=0;i<slotCount;i++){
+    var div = document.createElement('div');
+    if (list[i]){
+      var alive = list[i].alive !== false;
+      div.className = 'status-icon ' + (alive ? 'alive' : 'dead');
+      div.textContent = alive ? 'O' : 'X';
+      div.title = list[i].name || '';
+    } else {
+      div.className = 'status-icon empty';
+      div.textContent = '-';
+    }
+    container.appendChild(div);
+  }
+}
+
+function updateStatusLists(players){
+  if (myMode === 'ffa'){
+    renderStatusList('ally-icons', function(p){ return true; }, players);
+  } else if (myMode === 'ctto'){
+    var otherSide = (mySide === 'ct') ? 'terrorist' : 'ct';
+    renderStatusList('enemy-icons', function(p){ return p.side === otherSide; }, players);
+    renderStatusList('ally-icons', function(p){ return p.side === mySide; }, players);
+  } else {
+    var otherTeam = (myTeam === 'red') ? 'blue' : 'red';
+    renderStatusList('enemy-icons', function(p){ return p.team === otherTeam; }, players);
+    renderStatusList('ally-icons', function(p){ return p.team === myTeam; }, players);
+  }
+}
+
+/* =============== 레이더(미니맵) =============== */
+function computeRadarMates(players){
+  var mates = [];
+  Object.keys(players).forEach(function(pid){
+    if (pid === myId) return;
+    var p = players[pid];
+    if (p.alive === false) return;
+    if (typeof p.lat !== 'number') return;
+    var sameGroup = false;
+    if (myMode === 'ctto'){ sameGroup = (p.side === mySide); }
+    else if (MODES[myMode].teamMode === 'redblue'){ sameGroup = (p.team === myTeam); }
+    if (sameGroup) mates.push(p);
+  });
+  return mates;
+}
+
+/* ---- 인게임 미니맵: 실제 지도 타일(건물/도로 표시) 위에 사각형으로 표시 ---- */
+var gameMap = null;
+var gameMapDynamicLayer = null;
+var gameMapPickupLayer = null;
+
+function initGameMap(){
+  if (gameMap) return;
+  gameMap = L.map('game-map', {
+    zoomControl:false, attributionControl:false,
+    dragging:true, scrollWheelZoom:false, doubleClickZoom:false,
+    touchZoom:true, boxZoom:false, keyboard:false, tap:false
+  }).setView([myLat || 37.5, myLng || 127], 18);
+
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19, attribution: ''
+  }).addTo(gameMap);
+
+  gameMapPickupLayer = L.layerGroup().addTo(gameMap);
+  gameMapDynamicLayer = L.layerGroup().addTo(gameMap);
+
+  pickups.forEach(function(pk){
+    L.marker([pk.lat, pk.lng], { icon: pickupDivIcon(pk.weapon), interactive:false }).addTo(gameMapPickupLayer);
+  });
+
+  setTimeout(function(){ gameMap.invalidateSize(); }, 200);
+}
+
+function bombDivIcon(){
+  return L.divIcon({ className:'', html:'<div style="font-size:22px;filter:drop-shadow(0 0 4px #ff3b45);">💣</div>', iconSize:[22,22] });
+}
+
+function renderRadar(players, positionPings){
+  if (!gameMap || myLat === null || myLng === null) return;
+
+  gameMap.setView([myLat, myLng], gameMap.getZoom(), {animate:false});
+  gameMapDynamicLayer.clearLayers();
+
+  // 나 (팀 테마색)
+  L.circleMarker([myLat, myLng], {
+    radius:8, color:'#ffffff', weight:2, fillColor: myTeamColor, fillOpacity:1
+  }).addTo(gameMapDynamicLayer);
+
+  // 아군(또는 같은 진영) - 항상 실시간 표시
+  computeRadarMates(players).forEach(function(p){
+    L.circleMarker([p.lat, p.lng], {
+      radius:6, color: myTeamColor, weight:2, fillColor: myTeamColor, fillOpacity:0.65
+    }).addTo(gameMapDynamicLayer);
+  });
+
+  // 적(상대편) - 주기적으로 짧게(5초) 노출
+  if (positionPings){
+    var now = Date.now();
+    Object.keys(positionPings).forEach(function(pid){
+      if (pid === myId) return;
+      var ping = positionPings[pid];
+      if (!ping || (now - ping.ts) > PING_VISIBLE_MS) return;
+
+      var owner = players[pid];
+      var isEnemy = false;
+      if (myMode === 'ctto'){
+        isEnemy = (mySide === 'ct') && owner && owner.side === 'terrorist';
+      } else if (MODES[myMode] && MODES[myMode].teamMode === 'redblue'){
+        isEnemy = owner && owner.team && owner.team !== myTeam;
+      } else {
+        isEnemy = true; // ffa: 나를 제외한 전원이 적
+      }
+      if (!isEnemy) return;
+
+      L.circleMarker([ping.lat, ping.lng], {
+        radius:7, color:'#ff3b45', weight:2, fillColor:'#ff3b45', fillOpacity:0.45
+      }).addTo(gameMapDynamicLayer);
+    });
+  }
+
+  // 폭탄 위치(설치된 경우)
+  if (myMode === 'ctto' && gameState.bombPlantedAt && typeof gameState.bombLat === 'number'){
+    L.marker([gameState.bombLat, gameState.bombLng], { icon: bombDivIcon(), interactive:false }).addTo(gameMapDynamicLayer);
+  }
+}
+
+/* =============== 폭탄 상태 / 승리조건 =============== */
+function updateBombStatusUI(){
+  var bar = $("bomb-status-bar");
+  if (myMode !== 'ctto'){ bar.style.display = 'none'; return; }
+  bar.style.display = 'block';
+  if (gameState.bombDefusedAt){
+    bar.className = 'defused';
+    bar.textContent = '폭탄 해체 완료 - 대테러팀 승리';
+  } else if (gameState.bombPlantedAt){
+    var remain = BOMB_TIMER_MS - (Date.now() - gameState.bombPlantedAt);
+    if (remain < 0) remain = 0;
+    var mm = Math.floor(remain/60000), ss = Math.floor((remain%60000)/1000);
+    bar.className = 'armed';
+    bar.textContent = '🚨 폭탄 설치됨! 남은 시간 ' + mm + ':' + (ss<10?'0':'') + ss;
+  } else {
+    bar.className = '';
+    bar.textContent = '폭탄 상태: 미설치';
+  }
+}
+
+function showWinOverlay(state){
+  var iWon = (mySide === state.winner) || (myMode !== 'ctto' ? false : (mySide === state.winner));
+  $("win-title").textContent = iWon ? "승리" : "패배";
+  $("win-title").className = iWon ? "win" : "lose";
+  var reasonText = {
+    'ct_wiped': '대테러팀이 전멸했습니다. 폭탄이 작동합니다.',
+    'terrorist_wiped_before_plant': '테러리스트가 전원 제압되어 폭탄 위협이 사라졌습니다.',
+    'bomb_timeout': '폭탄 해체 시간이 초과되어 폭발했습니다.',
+    'defused': '대테러팀이 폭탄을 해체했습니다.'
+  };
+  $("win-desc").textContent = reasonText[state.winReason] || '';
+  $("win-overlay").classList.add('show');
+}
+
+function handleGameStateChange(state){
+  if (!state) return;
+  if (state.winner && state.winner !== lastKnownWinner){
+    lastKnownWinner = state.winner;
+    if (state.winReason === 'bomb_timeout') playExplosionSound();
+    showWinOverlay(state);
+  }
+  updateBombStatusUI();
+  updateAmmoUI();
+}
+
+/* =============== 동기화 루프 =============== */
+async function syncPlayers(){
+  if (myLat === null || myLng === null) return;
+  updateNearestPickup();
+
+  var players = await updateSharedPlayers(function(players){
+    var existing = players[myId] || {};
+    players[myId] = {
+      id: myId,
+      name: myName,
+      mode: myMode,
+      team: myTeam,
+      side: mySide,
+      role: myRole,
+      hp: (typeof existing.hp === 'number') ? existing.hp : MAX_HP,
+      alive: (typeof existing.alive === 'boolean') ? existing.alive : true,
+      lat: myLat, lng: myLng, ts: Date.now(),
+      lastHitTime: existing.lastHitTime || 0
+    };
+  });
+
+  latestPlayers = players;
+  handleMyState(players[myId]);
+  updateStatusLists(players);
+
+  var positionPings = null;
+
+  // 위치 핑 송신 (대테러전: 테러진영만 2분 / 그 외 모드: 전원 1분)
+  await maybeSendPositionPing();
+
+  // 위치 핑 수신 (내가 적을 볼 수 있는 입장이면 가져오기)
+  if (myMode !== 'ctto' || mySide === 'ct'){
+    var pingRaw = await storageGet(roomKey('positionPings'), true);
+    if (pingRaw){ try{ positionPings = JSON.parse(pingRaw); }catch(e){} }
+  }
+
+  if (myMode === 'ctto'){
+    if (mySide === 'ct'){
+      var radioRaw = await storageGet(roomKey('radio'), true);
+      var radioLog = [];
+      if (radioRaw){ try{ radioLog = JSON.parse(radioRaw); }catch(e){} }
+      renderRadioLog(radioLog, players);
+    }
+
+    gameState = await updateGameState(function(state){
+      if (state.winner) return;
+      var terroristAlive = 0, ctAlive = 0;
+      Object.keys(players).forEach(function(pid){
+        var p = players[pid];
+        if (p.mode !== 'ctto' || p.alive === false) return;
+        if (p.side === 'terrorist') terroristAlive++;
+        if (p.side === 'ct') ctAlive++;
+      });
+      if (typeof state.ctGunsActive !== 'boolean') state.ctGunsActive = false;
+
+      // 아직 한쪽 진영이 한 번도 접속(동기화)하지 않은 상태를 "전멸"로 착각하지 않도록,
+      // 실제로 그 진영 인원이 최소 한 번은 존재했었는지를 기록해뒀다가 그걸 기준으로 판정한다.
+      if (terroristAlive > 0) state.everHadTerrorist = true;
+      if (ctAlive > 0) state.everHadCt = true;
+
+      if (ctAlive === 0 && state.everHadCt && terroristAlive > 0){
+        state.winner = 'terrorist'; state.winReason = 'ct_wiped';
+      } else if (terroristAlive === 0 && state.everHadTerrorist && !state.bombPlantedAt){
+        state.winner = 'ct'; state.winReason = 'terrorist_wiped_before_plant';
+      } else if (state.bombPlantedAt && !state.bombDefusedAt){
+        var elapsed = Date.now() - state.bombPlantedAt;
+        if (elapsed >= BOMB_TIMER_MS){
+          state.winner = 'terrorist'; state.winReason = 'bomb_timeout';
+        }
+      }
+    });
+
+    handleGameStateChange(gameState);
+  } else {
+    gameState = {};
+  }
+
+  renderRadar(players, positionPings);
+}
+
+/* =============== 나가기 =============== */
+$("leave-btn").addEventListener('click', async function(){
+  if (!confirm("게임에서 나가시겠습니까? 내 정보가 다른 플레이어의 화면에서 제거됩니다.")) return;
+  clearInterval(syncTimer);
+  if (geoWatchId !== null) navigator.geolocation.clearWatch(geoWatchId);
+  await updateSharedPlayers(function(players){ delete players[myId]; });
+  location.reload();
+});
+
+/* =============== 초기화 =============== */
+window.addEventListener('load', async function(){
+  await initIdentity();
+  initZoneMap();
+  renderPickupTypeButtons();
+  if (roomCode && !isRoomHost){
+    myJoinedAt = Date.now(); // 새로고침도 "지금 막 들어온 것"으로 취급 (과거 시작 신호에 반응하지 않도록)
+    gameAutoStarting = false;
+    updateModeLockUI();
+    refreshGuestZonePreview();
+    pollHostSetup();
+    await loadPickups();
+    renderAllPickupMarkers();
+    renderPickupList();
+    clearInterval(guestZonePollTimer);
+    guestZonePollTimer = setInterval(async function(){
+      refreshGuestZonePreview();
+      pollHostSetup();
+      await loadPickups();
+      renderAllPickupMarkers();
+      renderPickupList();
+    }, 3000);
+  } else if (roomCode && isRoomHost){
+    updateModeLockUI();
+    if (selectedMode) broadcastHostSetup();
+    await loadPickups();
+    renderAllPickupMarkers();
+    renderPickupList();
+  }
+  validateStart();
+});
+
+})();
+</script>
+
+</body>
+</html>
+
